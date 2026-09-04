@@ -16,10 +16,26 @@ const app: Application = express();
 // Middlewares
 app.use(
   cors({
-    origin: env.CLIENT_URL,
+    origin: (requestOrigin, callback) => {
+      // Allow requests with no origin (e.g. mobile apps, curl, Postman)
+      if (!requestOrigin) return callback(null, true);
+      
+      const cleanOrigin = requestOrigin.replace(/\/+$/, '');
+      const clientUrl = (env.CLIENT_URL || '').replace(/\/+$/, '');
+
+      if (
+        cleanOrigin === clientUrl ||
+        cleanOrigin.endsWith('.vercel.app') ||
+        cleanOrigin.startsWith('http://localhost')
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
   })
 );
+
 
 app.use(cookieParser());
 app.use(express.json());

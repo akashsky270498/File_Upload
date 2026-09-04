@@ -7,10 +7,15 @@ let io: SocketIOServer | null = null;
 export const initSocket = (server: HttpServer): SocketIOServer => {
   io = new SocketIOServer(server, {
     cors: {
-      origin: env.CLIENT_URL,
+      origin: (requestOrigin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+        if (!requestOrigin) return callback(null, true);
+        return callback(null, true);
+      },
       methods: ['GET', 'POST'],
+      credentials: true,
     },
-  } as any);
+  } as ServerOptions);
+
 
   io.on('connection', (socket: Socket) => {
     console.log(`[Socket.io] Client connected: ${socket.id}`);
