@@ -5,6 +5,8 @@ import { logoutUser } from '../../store/slices/authSlice';
 import { markNotificationsRead, clearNotificationsHistory, fetchFileDetails } from '../../store/slices/filesSlice';
 import { showToast, toggleTheme } from '../../store/slices/uiSlice';
 import { ProfileModal } from '../users/ProfileModal';
+import { SOCKET_URL } from '../../config/env.config';
+
 
 interface NavbarProps {
   onOpenUpload: () => void;
@@ -87,7 +89,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenUpload }) => {
             </button>
 
             <a
-              href="http://localhost:5000/api-docs"
+              href={`${SOCKET_URL}/api-docs`}
               target="_blank"
               rel="noreferrer"
               className="btn btn-secondary btn-sm"

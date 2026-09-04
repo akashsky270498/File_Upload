@@ -14,7 +14,11 @@ const options: swaggerJSDoc.Options = {
     },
     servers: [
       {
-        url: `http://localhost:${env.PORT}`,
+        url: '/api',
+        description: 'Current Environment API Server (Live Production / Local)',
+      },
+      {
+        url: `http://localhost:${env.PORT || 5000}/api`,
         description: 'Local Development Server',
       },
     ],

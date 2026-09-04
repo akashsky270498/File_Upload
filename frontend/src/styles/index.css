@@ -2,6 +2,7 @@
 
 :root {
   --bg-dark: #0b0f19;
+  --bg-header: rgba(11, 15, 25, 0.88);
   --bg-card: rgba(18, 24, 38, 0.85);
   --bg-card-hover: rgba(28, 36, 56, 0.95);
   --bg-glass: rgba(255, 255, 255, 0.05);
@@ -19,6 +20,7 @@
   --text-main: #f3f4f6;
   --text-muted: #9ca3af;
   --text-dim: #6b7280;
+  --brand-gradient: linear-gradient(to right, #ffffff, #a5b4fc);
 
   --radius-sm: 10px;
   --radius-md: 16px;
@@ -33,15 +35,17 @@
 
 [data-theme="light"] {
   --bg-dark: #f8fafc;
-  --bg-card: rgba(255, 255, 255, 0.92);
+  --bg-header: rgba(255, 255, 255, 0.92);
+  --bg-card: rgba(255, 255, 255, 0.95);
   --bg-card-hover: rgba(241, 245, 249, 0.98);
   --bg-glass: rgba(0, 0, 0, 0.04);
-  --border-glass: rgba(0, 0, 0, 0.1);
+  --border-glass: rgba(0, 0, 0, 0.12);
   --border-focus: #4f46e5;
 
   --text-main: #0f172a;
   --text-muted: #475569;
   --text-dim: #64748b;
+  --brand-gradient: linear-gradient(to right, #0f172a, #4f46e5);
 
   --bg-pattern: 
     radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.12) 0%, transparent 45%),
@@ -68,7 +72,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(11, 15, 25, 0.88);
+  background: var(--bg-header);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-glass);
   padding: 0.9rem 1.75rem;
@@ -103,7 +107,7 @@ body {
 .brand-title {
   font-size: 1.4rem;
   font-weight: 800;
-  background: linear-gradient(to right, #fff, #a5b4fc);
+  background: var(--brand-gradient);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -412,7 +416,7 @@ body {
   border-radius: var(--radius-md);
   padding: 1.1rem 1rem 1.1rem 3.4rem;
   font-size: 1rem;
-  color: #fff;
+  color: var(--text-main);
   outline: none;
   backdrop-filter: blur(16px);
   transition: all var(--transition-fast);
@@ -755,9 +759,9 @@ body {
 
 .form-group input,
 .form-group textarea {
-  background: rgba(11, 15, 25, 0.6);
+  background: var(--bg-glass);
   border: 1px solid var(--border-glass);
-  color: #fff;
+  color: var(--text-main);
   padding: 0.85rem 1rem;
   border-radius: var(--radius-sm);
   outline: none;
