@@ -470,13 +470,13 @@ body {
 }
 
 .pill-btn:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+  background: var(--bg-glass);
 }
 
 .pill-btn.active {
   background: var(--primary);
-  color: #fff;
+  color: #ffffff;
   border-color: var(--primary);
   box-shadow: 0 0 18px var(--primary-glow);
 }
@@ -491,7 +491,7 @@ body {
 
 .select-wrapper select {
   background: var(--bg-card);
-  color: #fff;
+  color: var(--text-main);
   border: 1px solid var(--border-glass);
   padding: 0.55rem 1.1rem;
   border-radius: var(--radius-sm);
@@ -521,7 +521,7 @@ body {
 .file-card:hover {
   transform: translateY(-7px);
   border-color: rgba(99, 102, 241, 0.45);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), 0 0 24px var(--primary-glow);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2), 0 0 24px var(--primary-glow);
 }
 
 .file-card-preview {
@@ -560,6 +560,7 @@ body {
   top: 10px;
   left: 10px;
   background: rgba(11, 15, 25, 0.88);
+  color: #ffffff;
   backdrop-filter: blur(10px);
   padding: 4px 9px;
   border-radius: 6px;
@@ -599,7 +600,7 @@ body {
 .file-title {
   font-size: 1.05rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-main);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -624,7 +625,7 @@ body {
 .tag-chip {
   font-size: 0.72rem;
   background: rgba(99, 102, 241, 0.18);
-  color: #a5b4fc;
+  color: var(--primary);
   padding: 3px 8px;
   border-radius: 5px;
 }
@@ -666,15 +667,16 @@ body {
 }
 
 .modal-content {
-  background: rgba(18, 24, 38, 0.95);
+  background: var(--bg-card);
   border: 1px solid var(--border-glass);
+  color: var(--text-main);
   border-radius: var(--radius-lg);
   width: 100%;
   max-width: 580px;
   max-height: 90vh;
   overflow-y: auto;
   padding: 2rem;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7), 0 0 30px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4), 0 0 30px rgba(99, 102, 241, 0.15);
   animation: scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -703,7 +705,7 @@ body {
 .modal-header h3 {
   font-size: 1.25rem;
   font-weight: 800;
-  color: #fff;
+  color: var(--text-main);
 }
 
 /* Confirm Modal Styling */
@@ -774,6 +776,22 @@ body {
 .form-group textarea:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.input-error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
+}
+
+.field-error {
+  color: #ef4444;
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  animation: fadeIn 0.2s ease;
 }
 
 /* Global Toast Popup */
@@ -1051,7 +1069,7 @@ body {
   height: 36px;
   border-radius: 50%;
   background: var(--primary);
-  border: 3px solid #121826;
+  border: 3px solid var(--bg-card);
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -1490,7 +1508,7 @@ body {
   font-size: 0.8rem;
   font-weight: 600;
   background: rgba(99, 102, 241, 0.16);
-  color: #a5b4fc;
+  color: var(--primary);
   border: 1px solid rgba(99, 102, 241, 0.3);
   padding: 5px 12px;
   border-radius: 20px;
@@ -1499,7 +1517,7 @@ body {
 .tag-pill button {
   background: none;
   border: none;
-  color: #a5b4fc;
+  color: var(--primary);
   font-size: 1.1rem;
   cursor: pointer;
   line-height: 1;
