@@ -3,6 +3,7 @@ import { io, Socket } from 'socket.io-client';
 import { useAppDispatch } from '../store';
 import { setActiveNotification, addNotificationToHistory } from '../store/slices/filesSlice';
 import { RealtimeFileNotification } from '../types/file';
+import { SOCKET_URL } from '../config/env.config';
 
 let socket: Socket | null = null;
 
@@ -11,11 +12,12 @@ export const useSocket = (): void => {
 
   useEffect(() => {
     if (!socket) {
-      socket = io('http://localhost:5000', {
+      socket = io(SOCKET_URL, {
         withCredentials: true,
         transports: ['websocket', 'polling'],
       });
     }
+
 
     socket.on('connect', () => {
       console.log('[Socket.io] Connected to notification server');

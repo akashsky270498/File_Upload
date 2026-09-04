@@ -1,12 +1,14 @@
 import axios, { InternalAxiosRequestConfig } from 'axios';
+import { API_BASE_URL } from '../config/env.config';
 
 const axiosClient = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
   withCredentials: true,
 });
+
 
 axiosClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
@@ -39,7 +41,7 @@ axiosClient.interceptors.response.use(
     if (status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true;
       try {
-        const refreshResponse = await axios.post('/api/auth/refresh', {}, { withCredentials: true });
+        const refreshResponse = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, { withCredentials: true });
         const newAccessToken = refreshResponse.data.data.accessToken;
         localStorage.setItem('accessToken', newAccessToken);
 
