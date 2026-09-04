@@ -1560,5 +1560,177 @@ body {
   text-shadow: 0 1px 3px rgba(0,0,0,0.6);
 }
 
+/* ==========================================================================
+   Comprehensive Mobile & Tablet Responsive Media Queries
+   ========================================================================== */
+
+@media (max-width: 900px) {
+  .app-header {
+    padding: 0.75rem 1.25rem;
+  }
+
+  .header-actions {
+    gap: 0.65rem;
+  }
+
+  .file-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .preview-info-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .stats-badges-row {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Navbar Mobile Adjustments */
+  .app-header {
+    padding: 0.65rem 0.85rem;
+  }
+
+  .brand-logo {
+    gap: 0.5rem;
+  }
+
+  .logo-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+  }
+
+  .brand-title {
+    font-size: 1.15rem;
+  }
+
+  .brand-badge {
+    display: none;
+  }
+
+  .header-actions {
+    gap: 0.45rem;
+  }
+
+  /* Make button text responsive in header */
+  .header-actions .btn span,
+  .user-info {
+    display: none;
+  }
+
+  .header-actions .btn {
+    padding: 0.55rem;
+    border-radius: var(--radius-sm);
+  }
+
+  .user-profile-menu {
+    padding-left: 0.4rem;
+  }
+
+  .user-avatar {
+    width: 34px;
+    height: 34px;
+  }
+
+  /* Dashboard Controls Mobile */
+  .dashboard-container {
+    padding: 1.25rem 0.85rem;
+  }
+
+  .search-box input {
+    padding: 0.85rem 1rem 0.85rem 2.8rem;
+    font-size: 0.9rem;
+  }
+
+  .search-icon {
+    left: 0.95rem;
+  }
+
+  .filter-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.85rem;
+  }
+
+  .category-pills {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 0.35rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .category-pills::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pill-btn {
+    padding: 0.5rem 0.95rem;
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
+
+  .sort-selector {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  /* Single Column Mobile File Grid */
+  .file-grid {
+    grid-template-columns: 1fr;
+    gap: 1.1rem;
+  }
+
+  .file-card-preview {
+    height: 185px;
+  }
+
+  /* Modal Responsive Mobile Styles */
+  .modal-backdrop {
+    padding: 0.5rem;
+  }
+
+  .modal-content {
+    padding: 1.25rem 1rem;
+    max-height: 88vh;
+    border-radius: var(--radius-md);
+  }
+
+  .modal-header h3 {
+    font-size: 1.1rem;
+  }
+
+  .notification-dropdown {
+    width: calc(100vw - 1.7rem);
+    right: -10px;
+  }
+}
+
+@media (max-width: 420px) {
+  .brand-title {
+    font-size: 1rem;
+  }
+
+  .dropzone {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .selected-media-card {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .selected-preview-thumb {
+    width: 100%;
+    height: 120px;
+  }
+}
+
+
 
 
