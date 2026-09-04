@@ -4,6 +4,15 @@
 
 ---
 
+## 🌐 Live Demo & Production Links
+
+- **🚀 Live Frontend App (Vercel)**: [https://file-upload-weld.vercel.app](https://file-upload-weld.vercel.app)
+- **⚡ Live Backend REST API (Render)**: [https://file-upload-k6li.onrender.com](https://file-upload-k6li.onrender.com)
+- **📖 Interactive Swagger OpenAPI Docs**: [https://file-upload-k6li.onrender.com/api-docs](https://file-upload-k6li.onrender.com/api-docs)
+- **📦 Public GitHub Repository**: [https://github.com/akashsky270498/File_Upload](https://github.com/akashsky270498/File_Upload)
+
+---
+
 ## 🌟 Key Features
 
 ### 🔐 1. JWT Authentication & Security
