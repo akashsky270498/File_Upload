@@ -7,6 +7,7 @@ import { swaggerSpec } from './config/swagger';
 import { errorHandler } from './common/middleware/error-handler';
 import { NotFoundError } from './common/errors/app-error';
 import authRoutes from './modules/auth/auth.routes';
+import uploadRoutes from './modules/uploads/upload.routes';
 
 export const createApp = (): Express => {
   const app: Express = express();
@@ -36,6 +37,7 @@ export const createApp = (): Express => {
 
   // REST API Version 1 Routes
   app.use('/api/v1/auth', authRoutes);
+  app.use('/api/v1/uploads', uploadRoutes);
 
   // Handle 404 Route Not Found
   app.use((_req: Request, _res: Response, next) => {
