@@ -33,7 +33,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
   const [activeTab, setActiveTab] = useState<'profile' | 'password'>('profile');
 
   // Profile form state
-  const [name, setName] = useState(currentUser?.name || '');
+  const [firstName, setFirstName] = useState(currentUser?.firstName || '');
+  const [lastName, setLastName] = useState(currentUser?.lastName || '');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>(currentUser?.avatarUrl || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -67,11 +68,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
     try {
       if (avatarFile) {
         const formData = new FormData();
-        formData.append('name', name);
+        formData.append('firstName', firstName);
+        formData.append('lastName', lastName);
         formData.append('avatar', avatarFile);
         await usersApi.updateProfile(formData);
       } else {
-        await usersApi.updateProfile({ name, avatarUrl: previewUrl });
+        await usersApi.updateProfile({ firstName, lastName, avatarUrl: previewUrl });
       }
 
       dispatch(fetchCurrentUser());
@@ -156,10 +158,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
             <div className="whatsapp-profile-avatar-container">
               <div className="whatsapp-avatar-wrapper">
                 {previewUrl ? (
-                  <img src={previewUrl} alt={name} className="whatsapp-avatar-img" />
+                  <img src={previewUrl} alt={`${firstName} ${lastName}`} className="whatsapp-avatar-img" />
                 ) : (
                   <div className="whatsapp-avatar-initials">
-                    {getInitials(name || currentUser?.name || '')}
+                    {getInitials(`${firstName} ${lastName}`)}
                   </div>
                 )}
                 <button
@@ -207,15 +209,26 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
               </div>
             </div>
 
-            {/* Name Field */}
-            <div className="form-group" style={{ marginTop: '1rem' }}>
-              <label>Full Name *</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
+            {/* First Name & Last Name Fields */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '1rem' }}>
+              <div className="form-group">
+                <label>First Name *</label>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Last Name *</label>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                />
+              </div>
             </div>
 
             <div className="modal-footer" style={{ marginTop: '1.5rem' }}>

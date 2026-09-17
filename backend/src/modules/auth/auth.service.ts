@@ -371,6 +371,23 @@ export class AuthService {
   }
 
   /**
+   * Get Current Authenticated User Profile
+   */
+  public async getMe(userId: string): Promise<{ id: string; email: string; firstName: string; lastName: string; role: UserRole }> {
+    const user = await this.repository.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User account not found');
+    }
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+    };
+  }
+
+  /**
    * Change Password (Authenticated User)
    */
   public async changePassword(userId: string, dto: ChangePasswordDTO): Promise<{ message: string }> {

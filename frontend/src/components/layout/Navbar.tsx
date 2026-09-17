@@ -174,13 +174,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenUpload }) => {
                 >
                   <div className="user-avatar">
                     {user?.avatarUrl ? (
-                      <img src={user.avatarUrl} alt={user.name} />
+                      <img src={user.avatarUrl} alt={user ? `${user.firstName} ${user.lastName}` : ''} />
                     ) : (
-                      <span className="avatar-initials">{getInitials(user?.name || '')}</span>
+                      <span className="avatar-initials">
+                        {getInitials(user ? `${user.firstName} ${user.lastName}` : '')}
+                      </span>
                     )}
                   </div>
                   <div className="user-info">
-                    <span className="user-name">{user?.name || 'Authenticated User'}</span>
+                    <span className="user-name">
+                      {user ? `${user.firstName} ${user.lastName}` : 'Authenticated User'}
+                    </span>
                     <span className="user-email">{user?.email}</span>
                   </div>
                   <Settings size={16} style={{ color: 'var(--text-muted)' }} />

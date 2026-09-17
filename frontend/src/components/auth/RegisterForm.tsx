@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Mail, Lock, UserPlus, AlertCircle, ShieldCheck } from 'lucide-react';
+import { User, Mail, Lock, UserPlus, AlertCircle, ShieldCheck, Phone } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { registerUser, clearError } from '../../store/slices/authSlice';
 
@@ -13,40 +13,48 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
   const dispatch = useAppDispatch();
   const { isLoading, error } = useAppSelector((state) => state.auth);
 
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [mobileNumber, setMobileNumber] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const [touched, setTouched] = useState<{
-    name?: boolean;
+    firstName?: boolean;
+    lastName?: boolean;
     email?: boolean;
     password?: boolean;
     confirmPassword?: boolean;
   }>({});
 
   const [errors, setErrors] = useState<{
-    name?: string;
+    firstName?: string;
+    lastName?: string;
     email?: string;
     password?: string;
     confirmPassword?: string;
   }>({});
 
   const validateField = (
-    field: 'name' | 'email' | 'password' | 'confirmPassword',
-    val: string,
-    allValues?: { name: string; email: string; password: string; confirmPassword: string }
+    field: 'firstName' | 'lastName' | 'email' | 'password' | 'confirmPassword',
+    val: string
   ) => {
     const newErrors = { ...errors };
-    const currentPass = allValues ? allValues.password : password;
 
-    if (field === 'name') {
+    if (field === 'firstName') {
       if (!val.trim()) {
-        newErrors.name = 'Full name is required.';
-      } else if (val.trim().length < 2) {
-        newErrors.name = 'Name must be at least 2 characters.';
+        newErrors.firstName = 'First name is required.';
       } else {
-        delete newErrors.name;
+        delete newErrors.firstName;
+      }
+    }
+
+    if (field === 'lastName') {
+      if (!val.trim()) {
+        newErrors.lastName = 'Last name is required.';
+      } else {
+        delete newErrors.lastName;
       }
     }
 
@@ -63,26 +71,17 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
     if (field === 'password') {
       if (!val) {
         newErrors.password = 'Password is required.';
-      } else if (val.length < 6) {
-        newErrors.password = 'Password must be at least 6 characters.';
+      } else if (val.length < 8) {
+        newErrors.password = 'Password must be at least 8 characters.';
       } else {
         delete newErrors.password;
-      }
-
-      // Re-validate confirm password if touched
-      if (touched.confirmPassword && confirmPassword) {
-        if (confirmPassword !== val) {
-          newErrors.confirmPassword = 'Passwords do not match.';
-        } else {
-          delete newErrors.confirmPassword;
-        }
       }
     }
 
     if (field === 'confirmPassword') {
       if (!val) {
         newErrors.confirmPassword = 'Please confirm your password.';
-      } else if (val !== currentPass) {
+      } else if (val !== password) {
         newErrors.confirmPassword = 'Passwords do not match.';
       } else {
         delete newErrors.confirmPassword;
@@ -93,50 +92,29 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
     return newErrors;
   };
 
-  const handleBlur = (field: 'name' | 'email' | 'password' | 'confirmPassword') => {
-    setTouched((prev) => ({ ...prev, [field]: true }));
-    let val = '';
-    if (field === 'name') val = name;
-    if (field === 'email') val = email;
-    if (field === 'password') val = password;
-    if (field === 'confirmPassword') val = confirmPassword;
-
-    validateField(field, val);
-  };
-
-  const handleChange = (field: 'name' | 'email' | 'password' | 'confirmPassword', value: string) => {
-    if (field === 'name') setName(value);
-    if (field === 'email') setEmail(value);
-    if (field === 'password') setPassword(value);
-    if (field === 'confirmPassword') setConfirmPassword(value);
-
-    if (touched[field]) {
-      const allVals = {
-        name: field === 'name' ? value : name,
-        email: field === 'email' ? value : email,
-        password: field === 'password' ? value : password,
-        confirmPassword: field === 'confirmPassword' ? value : confirmPassword,
-      };
-      validateField(field, value, allVals);
-    }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    setTouched({ name: true, email: true, password: true, confirmPassword: true });
-    const allVals = { name, email, password, confirmPassword };
+    setTouched({ firstName: true, lastName: true, email: true, password: true, confirmPassword: true });
+    const errFirst = validateField('firstName', firstName);
+    const errLast = validateField('lastName', lastName);
+    const errEmail = validateField('email', email);
+    const errPass = validateField('password', password);
+    const errConfirm = validateField('confirmPassword', confirmPassword);
 
-    const errName = validateField('name', name, allVals);
-    const errEmail = validateField('email', email, allVals);
-    const errPass = validateField('password', password, allVals);
-    const errConfirm = validateField('confirmPassword', confirmPassword, allVals);
-
-    if (errName.name || errEmail.email || errPass.password || errConfirm.confirmPassword) {
+    if (errFirst.firstName || errLast.lastName || errEmail.email || errPass.password || errConfirm.confirmPassword) {
       return;
     }
 
-    dispatch(registerUser({ name: name.trim(), email: email.trim(), password }));
+    dispatch(
+      registerUser({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        password,
+        mobileNumber: mobileNumber.trim() || undefined,
+      })
+    );
   };
 
   return (
@@ -155,26 +133,36 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
       )}
 
       <form onSubmit={handleSubmit} className="auth-form" noValidate>
-        {/* Full Name */}
-        <div className="form-group">
-          <label>Full Name</label>
-          <div className="input-wrapper">
-            <User size={18} className="input-icon" />
-            <input
-              type="text"
-              placeholder="John Doe"
-              value={name}
-              onChange={(e) => handleChange('name', e.target.value)}
-              onBlur={() => handleBlur('name')}
-              className={touched.name && errors.name ? 'input-error' : ''}
-            />
-          </div>
-          {touched.name && errors.name && (
-            <div className="field-error">
-              <AlertCircle size={14} />
-              <span>{errors.name}</span>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          <div className="form-group">
+            <label>First Name</label>
+            <div className="input-wrapper">
+              <User size={18} className="input-icon" />
+              <input
+                type="text"
+                placeholder="Alex"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                onBlur={() => validateField('firstName', firstName)}
+                className={touched.firstName && errors.firstName ? 'input-error' : ''}
+              />
             </div>
-          )}
+          </div>
+
+          <div className="form-group">
+            <label>Last Name</label>
+            <div className="input-wrapper">
+              <User size={18} className="input-icon" />
+              <input
+                type="text"
+                placeholder="Mercer"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                onBlur={() => validateField('lastName', lastName)}
+                className={touched.lastName && errors.lastName ? 'input-error' : ''}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Email Address */}
@@ -184,19 +172,27 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
             <Mail size={18} className="input-icon" />
             <input
               type="email"
-              placeholder="name@company.com"
+              placeholder="alex@company.com"
               value={email}
-              onChange={(e) => handleChange('email', e.target.value)}
-              onBlur={() => handleBlur('email')}
+              onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => validateField('email', email)}
               className={touched.email && errors.email ? 'input-error' : ''}
             />
           </div>
-          {touched.email && errors.email && (
-            <div className="field-error">
-              <AlertCircle size={14} />
-              <span>{errors.email}</span>
-            </div>
-          )}
+        </div>
+
+        {/* Mobile Number */}
+        <div className="form-group">
+          <label>Mobile Number (Optional)</label>
+          <div className="input-wrapper">
+            <Phone size={18} className="input-icon" />
+            <input
+              type="text"
+              placeholder="+14155552671"
+              value={mobileNumber}
+              onChange={(e) => setMobileNumber(e.target.value)}
+            />
+          </div>
         </div>
 
         {/* Password */}
@@ -206,19 +202,13 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
             <Lock size={18} className="input-icon" />
             <input
               type="password"
-              placeholder="At least 6 characters"
+              placeholder="Min 8 characters (1 upper, 1 lower, 1 symbol)"
               value={password}
-              onChange={(e) => handleChange('password', e.target.value)}
-              onBlur={() => handleBlur('password')}
+              onChange={(e) => setPassword(e.target.value)}
+              onBlur={() => validateField('password', password)}
               className={touched.password && errors.password ? 'input-error' : ''}
             />
           </div>
-          {touched.password && errors.password && (
-            <div className="field-error">
-              <AlertCircle size={14} />
-              <span>{errors.password}</span>
-            </div>
-          )}
         </div>
 
         {/* Confirm Password */}
@@ -230,17 +220,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
               type="password"
               placeholder="Re-enter your password"
               value={confirmPassword}
-              onChange={(e) => handleChange('confirmPassword', e.target.value)}
-              onBlur={() => handleBlur('confirmPassword')}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              onBlur={() => validateField('confirmPassword', confirmPassword)}
               className={touched.confirmPassword && errors.confirmPassword ? 'input-error' : ''}
             />
           </div>
-          {touched.confirmPassword && errors.confirmPassword && (
-            <div className="field-error">
-              <AlertCircle size={14} />
-              <span>{errors.confirmPassword}</span>
-            </div>
-          )}
         </div>
 
         <button type="submit" className="btn btn-primary btn-block" disabled={isLoading}>

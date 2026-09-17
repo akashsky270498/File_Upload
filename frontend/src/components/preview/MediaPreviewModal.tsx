@@ -109,14 +109,16 @@ export const MediaPreviewModal: React.FC = () => {
             <div className="uploader-box">
               <div className="uploader-avatar">
                 {file.uploader?.avatarUrl ? (
-                  <img src={file.uploader.avatarUrl} alt={file.uploader.name} />
+                  <img src={file.uploader.avatarUrl} alt={file.uploader ? `${file.uploader.firstName || ''} ${file.uploader.lastName || ''}`.trim() || 'User' : 'User'} />
                 ) : (
-                  <span>{getInitials(file.uploader?.name || 'User')}</span>
+                  <span>{getInitials(file.uploader ? `${file.uploader.firstName || ''} ${file.uploader.lastName || ''}`.trim() || 'User' : 'User')}</span>
                 )}
               </div>
               <div className="uploader-meta">
                 <span className="uploader-label">Uploaded by</span>
-                <span className="uploader-name">{file.uploader?.name || 'User'}</span>
+                <span className="uploader-name">
+                  {file.uploader ? `${file.uploader.firstName || ''} ${file.uploader.lastName || ''}`.trim() || file.uploader.email : 'Anonymous'}
+                </span>
               </div>
             </div>
 

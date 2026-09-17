@@ -1,8 +1,11 @@
 export interface User {
   id: string;
   _id?: string;
-  name: string;
   email: string;
+  firstName: string;
+  lastName: string;
+  role: 'USER' | 'ADMIN';
+  mobileNumber?: string | null;
   avatarUrl?: string;
   createdAt?: string;
 }
@@ -18,4 +21,6 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  otpSent: boolean;
+  forgotPasswordStep: 'REQUEST' | 'VERIFY' | 'SUCCESS';
 }

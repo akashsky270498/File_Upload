@@ -8,7 +8,7 @@ export const usersApi = {
     return res.data;
   },
 
-  updateProfile: async (data: FormData | { name?: string; avatarUrl?: string }): Promise<ApiResponse<User>> => {
+  updateProfile: async (data: FormData | { firstName?: string; lastName?: string; avatarUrl?: string }): Promise<ApiResponse<User>> => {
     const headers = data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : {};
     const res = await axiosClient.put<ApiResponse<User>>('/users/profile', data, { headers });
     return res.data;
