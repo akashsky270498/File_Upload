@@ -22,7 +22,7 @@ export class NotificationService {
         title: dto.title,
         message: dto.message,
         type: dto.type,
-        read: false,
+        isRead: false,
       });
 
       logger.info(
@@ -36,7 +36,7 @@ export class NotificationService {
         title: notification.title,
         message: notification.message,
         type: notification.type,
-        read: notification.read,
+        isRead: notification.isRead,
         createdAt: notification.createdAt,
       });
 

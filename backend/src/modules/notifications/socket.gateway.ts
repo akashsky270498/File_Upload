@@ -112,6 +112,16 @@ export class SocketGateway {
     this.io.emit(event, payload);
     logger.info({ event }, `Socket Gateway: Broadcasted event '${event}' to all connected clients.`);
   }
+  /**
+   * Get Socket.IO server instance
+   */
+  public getIO(): SocketIOServer {
+    if (!this.io) {
+      throw new Error('Socket.IO Gateway is not initialized');
+    }
+    return this.io;
+  }
 }
 
 export const socketGateway = new SocketGateway();
+export const getIO = (): SocketIOServer => socketGateway.getIO();
