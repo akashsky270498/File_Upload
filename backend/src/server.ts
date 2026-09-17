@@ -32,7 +32,7 @@ const startServer = async (): Promise<void> => {
     await esIndexManager.initFilesIndex();
 
     // 6. Instantiate Express Application
-    const app = createApp();
+    const app = await createApp();
 
     // 6. Start HTTP Server Listener
     const server = app.listen(env.port, () => {

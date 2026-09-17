@@ -10,12 +10,13 @@ import { rateLimitMiddleware } from './common/middleware/rate-limit.middleware';
 import authRoutes from './modules/auth/auth.routes';
 import uploadRoutes from './modules/uploads/upload.routes';
 import searchRoutes from './modules/search/search.routes';
+import { setupGraphQL } from './graphql';
 
-export const createApp = (): Express => {
+export const createApp = async (): Promise<Express> => {
   const app: Express = express();
 
   // Global Middlewares
-  app.use(helmet({ contentSecurityPolicy: false })); // Allow Swagger UI inline scripts
+  app.use(helmet({ contentSecurityPolicy: false })); // Allow Swagger UI & GraphQL Playground inline scripts
   app.use(
     cors({
       origin: env.clientUrl,
@@ -36,6 +37,10 @@ export const createApp = (): Express => {
 
   // Swagger Documentation UI Route
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+  // GraphQL Read API Endpoint (Apollo Server 4)
+  const graphqlMiddleware = await setupGraphQL();
+  app.use('/graphql', express.json(), graphqlMiddleware);
 
   // REST API Version 1 Routes (Protected by Redis Distributed Rate Limiting)
   app.use('/api/v1/auth', rateLimitMiddleware(10, 60), authRoutes);
