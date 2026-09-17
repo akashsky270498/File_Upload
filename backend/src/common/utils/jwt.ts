@@ -1,29 +1,31 @@
-import jwt, { Secret, SignOptions } from 'jsonwebtoken';
-import { env } from '../../config/env.config';
+import jwt, { SignOptions } from 'jsonwebtoken';
+import { env } from '../../config/env';
+import { UserRole } from '../../infrastructure/postgres/models/user.model';
 
 export interface JwtPayload {
   userId: string;
   email: string;
+  role: UserRole;
 }
 
 export const generateAccessToken = (payload: JwtPayload): string => {
   const options: SignOptions = {
-    expiresIn: env.JWT_ACCESS_EXPIRATION as SignOptions['expiresIn'],
+    expiresIn: env.jwt.accessExpiration as any,
   };
-  return jwt.sign(payload, env.JWT_ACCESS_SECRET as Secret, options);
+  return jwt.sign(payload, env.jwt.accessSecret, options);
 };
 
 export const generateRefreshToken = (payload: JwtPayload): string => {
   const options: SignOptions = {
-    expiresIn: env.JWT_REFRESH_EXPIRATION as SignOptions['expiresIn'],
+    expiresIn: env.jwt.refreshExpiration as any,
   };
-  return jwt.sign(payload, env.JWT_REFRESH_SECRET as Secret, options);
+  return jwt.sign(payload, env.jwt.refreshSecret, options);
 };
 
 export const verifyAccessToken = (token: string): JwtPayload => {
-  return jwt.verify(token, env.JWT_ACCESS_SECRET as Secret) as JwtPayload;
+  return jwt.verify(token, env.jwt.accessSecret) as JwtPayload;
 };
 
 export const verifyRefreshToken = (token: string): JwtPayload => {
-  return jwt.verify(token, env.JWT_REFRESH_SECRET as Secret) as JwtPayload;
+  return jwt.verify(token, env.jwt.refreshSecret) as JwtPayload;
 };

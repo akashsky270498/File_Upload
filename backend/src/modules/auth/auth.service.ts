@@ -1,125 +1,245 @@
-import bcrypt from 'bcryptjs';
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken, JwtPayload } from '../../common/utils/jwt';
-import { userService } from '../users/users.service';
-import { userRepository } from '../users/users.repository';
-import { IUserResponse, sanitizeUser } from '../users/user.interface';
-import { RegisterInput, LoginInput, AuthResponseData, TokenRefreshResponse, ChangePasswordInput } from './auth.interface';
-import { BadRequestError, UnauthorizedError, NotFoundError } from '../../common/errors/customErrors';
+import crypto from 'crypto';
+import { UserRole, UserStatus } from '../../infrastructure/postgres/models/user.model';
+import { OtpType } from '../../infrastructure/postgres/models/otp-verification.model';
+import { hashPassword, comparePassword } from '../../common/utils/password';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../../common/utils/jwt';
+import { ConflictError, NotFoundError, UnauthorizedError, ValidationError } from '../../common/errors/app-error';
+import { logger } from '../../common/logger';
+import { authRepository, AuthRepository } from './auth.repository';
+import { RegisterDTO, AuthTokensResponse, UserAuthProfile } from './auth.interface';
 
 export class AuthService {
-  public async register(input: RegisterInput): Promise<AuthResponseData> {
-    const existingUser = await userService.findByEmail(input.email);
+  constructor(private readonly repository: AuthRepository = authRepository) {}
+
+  /**
+   * Register a new User
+   */
+  public async register(dto: RegisterDTO): Promise<{ id: string; email: string; message: string }> {
+    const existingUser = await this.repository.findByEmailOrMobile(dto.email, dto.mobileNumber);
     if (existingUser) {
-      throw new BadRequestError('User with this email already exists.');
+      throw new ConflictError('A user with this email or mobile number already exists');
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(input.password, salt);
+    const hashedPassword = await hashPassword(dto.password);
 
-    const user = await userService.createUser({
-      name: input.name,
-      email: input.email,
-      passwordHash,
+    const user = await this.repository.createUser({
+      email: dto.email.toLowerCase(),
+      passwordHash: hashedPassword,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      mobileNumber: dto.mobileNumber || null,
+      status: UserStatus.ACTIVE,
+      role: UserRole.USER,
     });
 
-    const payload = { userId: user._id.toString(), email: user.email };
-    const accessToken = generateAccessToken(payload);
-    const refreshToken = generateRefreshToken(payload);
-
-    await userService.addRefreshToken(user._id.toString(), refreshToken);
+    logger.info({ userId: user.id, email: user.email }, 'User registered successfully. Queuing welcome email job...');
 
     return {
-      user: sanitizeUser(user),
-      tokens: {
-        accessToken,
-        refreshToken,
-      },
+      id: user.id,
+      email: user.email,
+      message: 'Registration successful. Welcome email queued.',
     };
   }
 
-  public async login(input: LoginInput): Promise<AuthResponseData> {
-    const user = await userService.findByEmail(input.email);
+  /**
+   * Login with Email & Password
+   */
+  public async login(email: string, password: string): Promise<AuthTokensResponse> {
+    const user = await this.repository.findByEmail(email);
+
     if (!user) {
-      throw new UnauthorizedError('Invalid email address or password.');
+      throw new UnauthorizedError('Invalid email or password');
     }
 
-    const isMatch = await bcrypt.compare(input.password, user.passwordHash);
-    if (!isMatch) {
-      throw new UnauthorizedError('Invalid email address or password.');
+    if (user.status === UserStatus.BLOCKED) {
+      throw new UnauthorizedError('Your account has been suspended');
     }
 
-    const payload = { userId: user._id.toString(), email: user.email };
+    const isPasswordValid = await comparePassword(password, user.passwordHash);
+    if (!isPasswordValid) {
+      throw new UnauthorizedError('Invalid email or password');
+    }
+
+    const payload = { userId: user.id, email: user.email, role: user.role };
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
 
-    await userService.addRefreshToken(user._id.toString(), refreshToken);
+    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await this.repository.createRefreshToken({
+      userId: user.id,
+      tokenHash,
+      expiresAt,
+    });
+
+    await this.repository.updateLastLogin(user);
 
     return {
-      user: sanitizeUser(user),
-      tokens: {
-        accessToken,
-        refreshToken,
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
       },
     };
   }
 
-  public async refreshTokens(refreshToken: string): Promise<TokenRefreshResponse> {
-    if (!refreshToken) {
-      throw new UnauthorizedError('Refresh token is required.');
+  /**
+   * Request Login OTP
+   */
+  public async requestLoginOtp(email: string): Promise<{ message: string }> {
+    const user = await this.repository.findByEmail(email);
+
+    if (!user) {
+      throw new NotFoundError('No user account found with this email address');
     }
 
+    const rawOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpHash = crypto.createHash('sha256').update(rawOtp).digest('hex');
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+    await this.repository.deleteOtpByIdentifier(email, OtpType.EMAIL_LOGIN);
+
+    await this.repository.createOtpVerification({
+      userId: user.id,
+      identifier: email.toLowerCase(),
+      otpHash,
+      type: OtpType.EMAIL_LOGIN,
+      expiresAt,
+      attempts: 0,
+    });
+
+    logger.info({ email, rawOtp }, 'OTP generated for login. Queuing email delivery job...');
+
+    return {
+      message: 'OTP sent to your email address.',
+    };
+  }
+
+  /**
+   * Verify Login OTP & Issue Tokens
+   */
+  public async verifyLoginOtp(email: string, rawOtp: string): Promise<AuthTokensResponse> {
+    const otpRecord = await this.repository.findOtp(email, OtpType.EMAIL_LOGIN);
+
+    if (!otpRecord) {
+      throw new ValidationError('No active OTP verification request found');
+    }
+
+    if (new Date() > otpRecord.expiresAt) {
+      await this.repository.deleteOtp(otpRecord);
+      throw new ValidationError('OTP has expired. Please request a new OTP');
+    }
+
+    if (otpRecord.attempts >= 3) {
+      await this.repository.deleteOtp(otpRecord);
+      throw new ValidationError('Maximum OTP verification attempts exceeded. Request a new OTP');
+    }
+
+    const inputOtpHash = crypto.createHash('sha256').update(rawOtp).digest('hex');
+
+    if (inputOtpHash !== otpRecord.otpHash) {
+      await this.repository.incrementOtpAttempts(otpRecord);
+      throw new ValidationError(`Invalid OTP code. Attempts remaining: ${3 - (otpRecord.attempts + 1)}`);
+    }
+
+    const user = await this.repository.findById(otpRecord.userId!);
+    if (!user) {
+      throw new NotFoundError('User associated with OTP not found');
+    }
+
+    await this.repository.deleteOtp(otpRecord);
+
+    const payload = { userId: user.id, email: user.email, role: user.role };
+    const accessToken = generateAccessToken(payload);
+    const refreshToken = generateRefreshToken(payload);
+
+    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await this.repository.createRefreshToken({
+      userId: user.id,
+      tokenHash,
+      expiresAt,
+    });
+
+    await this.repository.updateLastLogin(user);
+
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+      },
+    };
+  }
+
+  /**
+   * Refresh Token Rotation
+   */
+  public async refreshTokens(incomingRefreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
+    let payload;
     try {
-      const decoded = verifyRefreshToken(refreshToken) as JwtPayload;
-      const isValid = await userService.verifyRefreshToken(decoded.userId, refreshToken);
-      if (!isValid) {
-        throw new UnauthorizedError('Invalid refresh token.');
-      }
-
-      await userService.removeRefreshToken(decoded.userId, refreshToken);
-
-      const payload = { userId: decoded.userId, email: decoded.email };
-      const newAccessToken = generateAccessToken(payload);
-      const newRefreshToken = generateRefreshToken(payload);
-
-      await userService.addRefreshToken(decoded.userId, newRefreshToken);
-
-      return {
-        accessToken: newAccessToken,
-        refreshToken: newRefreshToken,
-      };
-    } catch (error: unknown) {
-      throw new UnauthorizedError('Invalid or expired refresh token.');
+      payload = verifyRefreshToken(incomingRefreshToken);
+    } catch (err) {
+      throw new UnauthorizedError('Invalid or expired refresh token');
     }
+
+    const incomingHash = crypto.createHash('sha256').update(incomingRefreshToken).digest('hex');
+
+    const storedToken = await this.repository.findRefreshToken(payload.userId, incomingHash);
+
+    if (!storedToken || storedToken.revokedAt || new Date() > storedToken.expiresAt) {
+      throw new UnauthorizedError('Refresh token has been revoked or expired');
+    }
+
+    await this.repository.revokeRefreshToken(storedToken);
+
+    const user = await this.repository.findById(payload.userId);
+    if (!user || user.status === UserStatus.BLOCKED) {
+      throw new UnauthorizedError('User account suspended or not found');
+    }
+
+    const newPayload = { userId: user.id, email: user.email, role: user.role };
+    const newAccessToken = generateAccessToken(newPayload);
+    const newRefreshToken = generateRefreshToken(newPayload);
+
+    const newTokenHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await this.repository.createRefreshToken({
+      userId: user.id,
+      tokenHash: newTokenHash,
+      expiresAt,
+    });
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+    };
   }
 
-  public async logout(userId: string, refreshToken: string): Promise<void> {
-    if (refreshToken) {
-      await userService.removeRefreshToken(userId, refreshToken);
-    }
-  }
+  /**
+   * Logout (Revoke Refresh Token)
+   */
+  public async logout(incomingRefreshToken: string): Promise<{ message: string }> {
+    const tokenHash = crypto.createHash('sha256').update(incomingRefreshToken).digest('hex');
 
-  public async getProfile(userId: string): Promise<IUserResponse> {
-    const user = await userService.getProfile(userId);
-    return sanitizeUser(user);
-  }
-
-  public async changePassword(userId: string, input: ChangePasswordInput): Promise<void> {
-    const user = await userService.findById(userId);
-    if (!user) {
-      throw new NotFoundError('User profile not found.');
+    const storedToken = await this.repository.findRefreshTokenByHash(tokenHash);
+    if (storedToken && !storedToken.revokedAt) {
+      await this.repository.revokeRefreshToken(storedToken);
     }
 
-    const isMatch = await bcrypt.compare(input.currentPassword, user.passwordHash);
-    if (!isMatch) {
-      throw new BadRequestError('Current password is incorrect.');
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    const newPasswordHash = await bcrypt.hash(input.newPassword, salt);
-
-    await userRepository.updateUser(userId, { passwordHash: newPasswordHash });
+    return { message: 'Logout successful' };
   }
 }
 
 export const authService = new AuthService();
-

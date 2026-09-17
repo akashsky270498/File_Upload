@@ -1,33 +1,46 @@
-import { IUserResponse } from '../users/user.interface';
+import { UserRole } from '../../infrastructure/postgres/models/user.model';
 
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
+export interface RegisterDTO {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  mobileNumber?: string;
 }
 
-export interface AuthResponseData {
-  user: IUserResponse;
-  tokens: AuthTokens;
-}
-
-export interface RegisterInput {
-  name: string;
+export interface LoginDTO {
   email: string;
   password: string;
 }
 
-export interface LoginInput {
+export interface RequestOtpDTO {
   email: string;
-  password: string;
 }
 
-export interface TokenRefreshResponse {
-  accessToken: string;
+export interface VerifyOtpDTO {
+  email: string;
+  otp: string;
+}
+
+export interface RefreshTokenDTO {
   refreshToken: string;
 }
 
-export interface ChangePasswordInput {
-  currentPassword: string;
-  newPassword: string;
+export interface UserAuthProfile {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: UserRole;
 }
 
+export interface AuthTokensResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: UserAuthProfile;
+}
+
+export interface TokenPairResponse {
+  accessToken: string;
+  refreshToken: string;
+}

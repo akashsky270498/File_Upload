@@ -1,121 +1,87 @@
 import { Request, Response, NextFunction } from 'express';
-import { authService } from './auth.service';
-import { AuthResponseData, AuthTokens } from './auth.interface';
-import { sendResponse } from '../../common/utils/apiResponse';
-import { AuthenticatedRequest } from '../../common/types/authenticatedRequest.interface';
-import { IUserResponse } from '../users/user.interface';
-import { UnauthorizedError } from '../../common/errors/customErrors';
+import { authService, AuthService } from './auth.service';
+import { RegisterDTO, LoginDTO, RequestOtpDTO, VerifyOtpDTO, RefreshTokenDTO } from './auth.interface';
 
 export class AuthController {
+  constructor(private readonly service: AuthService = authService) {}
+
   public register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { name, email, password } = req.body as Record<string, string>;
-      const result: AuthResponseData = await authService.register({ name, email, password });
-
-      const isProd = process.env.NODE_ENV === 'production';
-      res.cookie('refreshToken', result.tokens.refreshToken, {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: isProd ? 'none' : 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+      const dto: RegisterDTO = req.body;
+      const result = await this.service.register(dto);
+      res.status(201).json({
+        success: true,
+        data: result,
       });
-
-      sendResponse<AuthResponseData>(res, 201, 'User account registered successfully.', result);
-    } catch (error) {
-      next(error);
+    } catch (err) {
+      next(err);
     }
   };
 
   public login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { email, password } = req.body as Record<string, string>;
-      const result: AuthResponseData = await authService.login({ email, password });
-
-      const isProd = process.env.NODE_ENV === 'production';
-      res.cookie('refreshToken', result.tokens.refreshToken, {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: isProd ? 'none' : 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+      const dto: LoginDTO = req.body;
+      const result = await this.service.login(dto.email, dto.password);
+      res.status(200).json({
+        success: true,
+        data: result,
       });
-
-      sendResponse<AuthResponseData>(res, 200, 'Authentication successful.', result);
-    } catch (error) {
-      next(error);
+    } catch (err) {
+      next(err);
     }
   };
 
-  public refresh = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public requestLoginOtp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const cookies = (req.cookies || {}) as Record<string, string>;
-      const body = (req.body || {}) as Record<string, string>;
-      const refreshToken = cookies.refreshToken || body.refreshToken || '';
-
-      const tokens: AuthTokens = await authService.refreshTokens(refreshToken);
-
-      const isProd = process.env.NODE_ENV === 'production';
-      res.cookie('refreshToken', tokens.refreshToken, {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: isProd ? 'none' : 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+      const dto: RequestOtpDTO = req.body;
+      const result = await this.service.requestLoginOtp(dto.email);
+      res.status(200).json({
+        success: true,
+        data: result,
       });
-
-      sendResponse<AuthTokens>(res, 200, 'Access token refreshed successfully.', tokens);
-    } catch (error) {
-      next(error);
+    } catch (err) {
+      next(err);
     }
   };
 
-  public logout = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  public verifyLoginOtp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = req.user?.userId;
-      const cookies = (req.cookies || {}) as Record<string, string>;
-      const body = (req.body || {}) as Record<string, string>;
-      const refreshToken = cookies.refreshToken || body.refreshToken || '';
-
-      if (userId) {
-        await authService.logout(userId, refreshToken);
-      }
-
-      res.clearCookie('refreshToken');
-      sendResponse(res, 200, 'Successfully logged out.');
-    } catch (error) {
-      next(error);
+      const dto: VerifyOtpDTO = req.body;
+      const result = await this.service.verifyLoginOtp(dto.email, dto.otp);
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (err) {
+      next(err);
     }
   };
 
-  public getMe = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  public refreshTokens = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = req.user?.userId;
-      if (!userId) {
-        sendResponse(res, 401, 'User not authenticated.');
-        return;
-      }
-
-      const user: IUserResponse = await authService.getProfile(userId);
-      sendResponse<IUserResponse>(res, 200, 'User profile retrieved successfully.', user);
-    } catch (error) {
-      next(error);
+      const dto: RefreshTokenDTO = req.body;
+      const result = await this.service.refreshTokens(dto.refreshToken);
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (err) {
+      next(err);
     }
   };
 
-  public changePassword = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  public logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = req.user?.userId;
-      if (!userId) {
-        throw new UnauthorizedError('User authentication required.');
-      }
-
-      const { currentPassword, newPassword } = req.body as Record<string, string>;
-      await authService.changePassword(userId, { currentPassword, newPassword });
-
-      sendResponse(res, 200, 'Password changed successfully.');
-    } catch (error) {
-      next(error);
+      const dto: RefreshTokenDTO = req.body;
+      const result = await this.service.logout(dto.refreshToken);
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (err) {
+      next(err);
     }
   };
 }
 
 export const authController = new AuthController();
-

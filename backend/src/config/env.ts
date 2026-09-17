@@ -14,6 +14,10 @@ const envSchema = Joi.object({
   DB_PASSWORD: Joi.string().required(),
   DB_LOGGING: Joi.boolean().default(false),
   CLIENT_URL: Joi.string().default('http://localhost:5173'),
+  JWT_ACCESS_SECRET: Joi.string().default('super_secret_access_key_12345!@#$%'),
+  JWT_ACCESS_EXPIRATION: Joi.string().default('15m'),
+  JWT_REFRESH_SECRET: Joi.string().default('super_secret_refresh_key_67890!@#$%'),
+  JWT_REFRESH_EXPIRATION: Joi.string().default('7d'),
 }).unknown();
 
 const { error, value: envVars } = envSchema.validate(process.env);
@@ -33,5 +37,11 @@ export const env = {
     user: envVars.DB_USER as string,
     password: envVars.DB_PASSWORD as string,
     logging: envVars.DB_LOGGING as boolean,
+  },
+  jwt: {
+    accessSecret: envVars.JWT_ACCESS_SECRET as string,
+    accessExpiration: envVars.JWT_ACCESS_EXPIRATION as string,
+    refreshSecret: envVars.JWT_REFRESH_SECRET as string,
+    refreshExpiration: envVars.JWT_REFRESH_EXPIRATION as string,
   },
 };

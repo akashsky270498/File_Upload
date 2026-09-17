@@ -7,6 +7,8 @@ import { Tag } from './models/tag.model';
 import { FileTag } from './models/file-tag.model';
 import { Notification } from './models/notification.model';
 import { AuditLog } from './models/audit-log.model';
+import { RefreshToken } from './models/refresh-token.model';
+import { OtpVerification } from './models/otp-verification.model';
 
 export const sequelize = new Sequelize({
   dialect: 'postgres',
@@ -15,8 +17,8 @@ export const sequelize = new Sequelize({
   database: env.db.name,
   username: env.db.user,
   password: env.db.password,
-  logging: env.db.logging ? (msg) => logger.debug(msg) : false,
-  models: [User, File, Tag, FileTag, Notification, AuditLog],
+  logging: env.db.logging ? (msg: string) => logger.debug(msg) : false,
+  models: [User, File, Tag, FileTag, Notification, AuditLog, RefreshToken, OtpVerification],
   pool: {
     max: 20,
     min: 2,

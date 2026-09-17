@@ -1,42 +1,35 @@
 import Joi from 'joi';
 
 export const registerSchema = Joi.object({
-  name: Joi.string().min(2).max(50).required().messages({
-    'string.empty': 'Full name is required.',
-    'string.min': 'Full name must be at least 2 characters long.',
-    'string.max': 'Full name cannot exceed 50 characters.',
-  }),
   email: Joi.string().email().required().messages({
-    'string.email': 'Please provide a valid email address.',
-    'string.empty': 'Email address is required.',
+    'string.email': 'Please provide a valid email address',
+    'any.required': 'Email is required',
   }),
-  password: Joi.string().min(6).max(100).required().messages({
-    'string.min': 'Password must be at least 6 characters long.',
-    'string.empty': 'Password is required.',
+  password: Joi.string().min(8).required().messages({
+    'string.min': 'Password must be at least 8 characters long',
+    'any.required': 'Password is required',
+  }),
+  firstName: Joi.string().max(100).required(),
+  lastName: Joi.string().max(100).required(),
+  mobileNumber: Joi.string().pattern(/^\+[1-9]\d{1,14}$/).optional().messages({
+    'string.pattern.base': 'Mobile number must include valid country code format (e.g. +1234567890)',
   }),
 });
 
 export const loginSchema = Joi.object({
-  email: Joi.string().email().required().messages({
-    'string.email': 'Please provide a valid email address.',
-    'string.empty': 'Email address is required.',
-  }),
-  password: Joi.string().required().messages({
-    'string.empty': 'Password is required.',
-  }),
+  email: Joi.string().email().required(),
+  password: Joi.string().required(),
+});
+
+export const requestOtpSchema = Joi.object({
+  email: Joi.string().email().required(),
+});
+
+export const verifyOtpSchema = Joi.object({
+  email: Joi.string().email().required(),
+  otp: Joi.string().length(6).required(),
 });
 
 export const refreshTokenSchema = Joi.object({
-  refreshToken: Joi.string().optional(),
+  refreshToken: Joi.string().required(),
 });
-
-export const changePasswordSchema = Joi.object({
-  currentPassword: Joi.string().required().messages({
-    'string.empty': 'Current password is required.',
-  }),
-  newPassword: Joi.string().min(6).max(100).required().messages({
-    'string.empty': 'New password is required.',
-    'string.min': 'New password must be at least 6 characters long.',
-  }),
-});
-

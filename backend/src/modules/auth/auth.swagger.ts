@@ -5,19 +5,26 @@
  *     RegisterInput:
  *       type: object
  *       required:
- *         - name
  *         - email
  *         - password
+ *         - firstName
+ *         - lastName
  *       properties:
- *         name:
- *           type: string
- *           example: John Doe
  *         email:
  *           type: string
- *           example: john@example.com
+ *           example: alex@example.com
  *         password:
  *           type: string
- *           example: secret123
+ *           example: Password123!
+ *         firstName:
+ *           type: string
+ *           example: Alex
+ *         lastName:
+ *           type: string
+ *           example: Mercer
+ *         mobileNumber:
+ *           type: string
+ *           example: "+14155552671"
  *     LoginInput:
  *       type: object
  *       required:
@@ -26,17 +33,45 @@
  *       properties:
  *         email:
  *           type: string
- *           example: john@example.com
+ *           example: alex@example.com
  *         password:
  *           type: string
- *           example: secret123
+ *           example: Password123!
+ *     RequestOtpInput:
+ *       type: object
+ *       required:
+ *         - email
+ *       properties:
+ *         email:
+ *           type: string
+ *           example: alex@example.com
+ *     VerifyOtpInput:
+ *       type: object
+ *       required:
+ *         - email
+ *         - otp
+ *       properties:
+ *         email:
+ *           type: string
+ *           example: alex@example.com
+ *         otp:
+ *           type: string
+ *           example: "123456"
+ *     RefreshTokenInput:
+ *       type: object
+ *       required:
+ *         - refreshToken
+ *       properties:
+ *         refreshToken:
+ *           type: string
+ *           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
  */
 
 /**
  * @openapi
- * /api/auth/register:
+ * /api/v1/auth/register:
  *   post:
- *     summary: Register a new user account
+ *     summary: Register a new User account
  *     tags:
  *       - Authentication
  *     requestBody:
@@ -49,14 +84,13 @@
  *       201:
  *         description: User registered successfully
  *       400:
- *         description: Duplicate email or invalid input
- */
-
-/**
- * @openapi
- * /api/auth/login:
+ *         description: Validation error
+ *       409:
+ *         description: Email or Mobile number already exists
+ * 
+ * /api/v1/auth/login:
  *   post:
- *     summary: Authenticate user & receive access/refresh tokens
+ *     summary: Login with Email and Password
  *     tags:
  *       - Authentication
  *     requestBody:
@@ -67,87 +101,73 @@
  *             $ref: '#/components/schemas/LoginInput'
  *     responses:
  *       200:
- *         description: Login successful
+ *         description: Login successful, returns JWT Access Token and Refresh Token
  *       401:
- *         description: Invalid credentials
- */
-
-/**
- * @openapi
- * /api/auth/refresh:
+ *         description: Invalid credentials or account blocked
+ * 
+ * /api/v1/auth/request-login-otp:
  *   post:
- *     summary: Issue a new Access Token using Refresh Cookie
+ *     summary: Request 6-digit OTP for Email Login
  *     tags:
  *       - Authentication
- *     responses:
- *       200:
- *         description: Access token refreshed
- *       401:
- *         description: Invalid or expired refresh token
- */
-
-/**
- * @openapi
- * /api/auth/logout:
- *   post:
- *     summary: Logout user and invalidate refresh token
- *     tags:
- *       - Authentication
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Successfully logged out
- */
-
-/**
- * @openapi
- * /api/auth/me:
- *   get:
- *     summary: Get profile of authenticated user
- *     tags:
- *       - Authentication
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: User profile retrieved
- *       401:
- *         description: Unauthorized
- */
-
-/**
- * @openapi
- * /api/auth/change-password:
- *   post:
- *     summary: Change user password
- *     tags:
- *       - Authentication
- *     security:
- *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - currentPassword
- *               - newPassword
- *             properties:
- *               currentPassword:
- *                 type: string
- *                 example: oldSecret123
- *               newPassword:
- *                 type: string
- *                 example: newSecret456
+ *             $ref: '#/components/schemas/RequestOtpInput'
  *     responses:
  *       200:
- *         description: Password changed successfully
+ *         description: OTP generated and sent
+ *       404:
+ *         description: User not found
+ * 
+ * /api/v1/auth/verify-login-otp:
+ *   post:
+ *     summary: Verify 6-digit Email Login OTP
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/VerifyOtpInput'
+ *     responses:
+ *       200:
+ *         description: OTP verified, returns JWT Access Token and Refresh Token
  *       400:
- *         description: Current password incorrect
+ *         description: Invalid or expired OTP
+ * 
+ * /api/v1/auth/refresh:
+ *   post:
+ *     summary: Refresh Tokens (Refresh Token Rotation)
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/RefreshTokenInput'
+ *     responses:
+ *       200:
+ *         description: Brand new Access Token and Refresh Token pair issued
  *       401:
- *         description: Unauthorized
+ *         description: Refresh token revoked or invalid
+ * 
+ * /api/v1/auth/logout:
+ *   post:
+ *     summary: Logout user and revoke Refresh Token
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/RefreshTokenInput'
+ *     responses:
+ *       200:
+ *         description: Refresh token revoked successfully
  */
-export {};
-
