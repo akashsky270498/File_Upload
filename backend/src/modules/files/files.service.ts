@@ -82,21 +82,33 @@ export class FileService {
       thumbnailUrl = '';
     }
 
-    const createdFile = await this.repo.createFile({
-      title,
-      description,
-      originalName: file.originalname,
-      tags,
-      fileType,
-      mimeType: file.mimetype,
-      size: file.size,
-      cloudinaryId: uploadResult.public_id,
-      url: uploadResult.url,
-      secureUrl: uploadResult.secure_url,
-      thumbnailUrl,
-      uploader: new Types.ObjectId(uploaderId),
-      viewsCount: 0,
-    });
+    let createdFile: IFile;
+    try {
+      createdFile = await this.repo.createFile({
+        title,
+        description,
+        originalName: file.originalname,
+        tags,
+        fileType,
+        mimeType: file.mimetype,
+        size: file.size,
+        cloudinaryId: uploadResult.public_id,
+        url: uploadResult.url,
+        secureUrl: uploadResult.secure_url,
+        thumbnailUrl,
+        uploader: new Types.ObjectId(uploaderId),
+        viewsCount: 0,
+      });
+    } catch (dbError) {
+      // Rollback: Delete orphan asset from Cloudinary if MongoDB save fails
+      try {
+        await cloudinary.uploader.destroy(uploadResult.public_id, { resource_type: resourceType });
+        console.log(`[Rollback Success] Deleted orphan Cloudinary asset: ${uploadResult.public_id}`);
+      } catch (rollbackErr) {
+        console.error(`[Rollback Error] Failed to destroy Cloudinary asset ${uploadResult.public_id}:`, rollbackErr);
+      }
+      throw dbError;
+    }
 
     const populatedFile = await this.repo.findById(createdFile._id.toString());
     const resultFile = populatedFile || createdFile;

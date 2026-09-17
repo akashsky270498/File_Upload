@@ -1,26 +1,44 @@
-import http from 'http';
-import app from './app';
-import { env } from './config/env.config';
-import { connectDB } from './config/db.config';
-import { initSocket } from './modules/notifications/socket.gateway';
+import 'reflect-metadata';
+import { createApp } from './app';
+import { env } from './config/env';
+import { logger } from './common/logger';
+import { connectPostgres, sequelize } from './infrastructure/postgres';
 
-const server = http.createServer(app);
-
-// Initialize Socket.io WebSockets
-initSocket(server);
-
-// Start Database & Server Listener
 const startServer = async (): Promise<void> => {
-  await connectDB();
+  try {
+    // 1. Connect to PostgreSQL Database
+    await connectPostgres();
 
-  const PORT = Number(env.PORT) || 5000;
+    // 2. Instantiate Express Application
+    const app = createApp();
 
-  server.listen(PORT, () => {
-    console.log(`=======================================================`);
-    console.log(`[Server] Multimedia API Server running on port ${PORT}`);
-    console.log(`[Swagger] Docs available at http://localhost:${PORT}/api-docs`);
-    console.log(`=======================================================`);
-  });
+    // 3. Start HTTP Server Listener
+    const server = app.listen(env.port, () => {
+      logger.info(`Server running in [${env.nodeEnv}] mode on http://localhost:${env.port}`);
+    });
+
+    // Graceful Shutdown handling
+    const gracefulShutdown = async (signal: string) => {
+      logger.info(`Received ${signal}. Initiating graceful shutdown...`);
+      server.close(async () => {
+        logger.info('HTTP server closed.');
+        try {
+          await sequelize.close();
+          logger.info('PostgreSQL connection pool closed.');
+          process.exit(0);
+        } catch (err) {
+          logger.error({ err }, 'Error during database disconnection.');
+          process.exit(1);
+        }
+      });
+    };
+
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  } catch (error) {
+    logger.error({ error }, 'Failed to bootstrap server application.');
+    process.exit(1);
+  }
 };
 
 startServer();
