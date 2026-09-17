@@ -1,0 +1,42 @@
+name: OmniMedia Backend CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, 'feat/*' ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  verify-and-test:
+    name: Build, TypeCheck & Test Suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment (v20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'backend/package-lock.json'
+
+      - name: Install Package Dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: TypeScript Type Checking (noEmit)
+        working-directory: ./backend
+        run: npx tsc --noEmit
+
+      - name: Execute Jest Unit & Integration Test Suite
+        working-directory: ./backend
+        run: npm test
+
+      - name: Compile Production Output
+        working-directory: ./backend
+        run: npm run build
+
+      - name: Test Production Docker Multi-Stage Build
+        run: docker build -t omnimedia-backend:production ./backend
