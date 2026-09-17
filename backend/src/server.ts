@@ -20,23 +20,15 @@ const startServer = async (): Promise<void> => {
     // 0. Initialize OpenTelemetry Distributed Tracing (non-blocking)
     initTracing().catch(() => {});
 
-    // 1. Connect to PostgreSQL Database
-    await connectPostgres();
-
-    // 2. Connect to Redis Instance
-    await connectRedis();
-
-    // 3. Connect to RabbitMQ Broker & Start Workers
-    await connectRabbitMQ();
-    await startAllWorkers();
-
-    // 4. Connect to Kafka Brokers & Start Event Consumers
-    await connectKafka();
-    await startAllKafkaConsumers();
-
-    // 5. Connect to Elasticsearch & Initialize Index Mapping
-    await connectElasticsearch();
-    await esIndexManager.initFilesIndex();
+    // 1-5. Parallelize Infrastructure Handshakes for Instant (<3s) Bootstrapping
+    logger.info('Bootstrapping backend infrastructure services in parallel...');
+    await Promise.all([
+      connectPostgres(),
+      connectRedis(),
+      connectRabbitMQ().then(() => startAllWorkers()),
+      connectKafka().then(() => startAllKafkaConsumers()),
+      connectElasticsearch().then(() => esIndexManager.initFilesIndex()),
+    ]);
 
     // 6. Instantiate Express Application & HTTP Server
     const app = await createApp();

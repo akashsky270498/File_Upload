@@ -24,6 +24,11 @@ const envSchema = Joi.object({
   JWT_ACCESS_EXPIRATION: Joi.string().default('15m'),
   JWT_REFRESH_SECRET: Joi.string().default('super_secret_refresh_key_67890!@#$%'),
   JWT_REFRESH_EXPIRATION: Joi.string().default('7d'),
+  SMTP_HOST: Joi.string().optional().allow(''),
+  SMTP_PORT: Joi.number().default(587),
+  SMTP_USER: Joi.string().optional().allow(''),
+  SMTP_PASS: Joi.string().optional().allow(''),
+  SMTP_FROM: Joi.string().default('OmniMedia <no-reply@omnimedia.com>'),
 }).unknown();
 
 const { error, value: envVars } = envSchema.validate(process.env);
@@ -57,6 +62,13 @@ export const env = {
   },
   elasticsearch: {
     node: envVars.ELASTICSEARCH_NODE as string,
+  },
+  smtp: {
+    host: envVars.SMTP_HOST as string || undefined,
+    port: envVars.SMTP_PORT as number,
+    user: envVars.SMTP_USER as string || undefined,
+    pass: envVars.SMTP_PASS as string || undefined,
+    from: envVars.SMTP_FROM as string,
   },
   jwt: {
     accessSecret: envVars.JWT_ACCESS_SECRET as string,
