@@ -9,6 +9,7 @@ import { NotFoundError } from './common/errors/app-error';
 import { rateLimitMiddleware } from './common/middleware/rate-limit.middleware';
 import authRoutes from './modules/auth/auth.routes';
 import uploadRoutes from './modules/uploads/upload.routes';
+import searchRoutes from './modules/search/search.routes';
 
 export const createApp = (): Express => {
   const app: Express = express();
@@ -39,6 +40,7 @@ export const createApp = (): Express => {
   // REST API Version 1 Routes (Protected by Redis Distributed Rate Limiting)
   app.use('/api/v1/auth', rateLimitMiddleware(10, 60), authRoutes);
   app.use('/api/v1/uploads', rateLimitMiddleware(5, 60), uploadRoutes);
+  app.use('/api/v1/search', rateLimitMiddleware(20, 60), searchRoutes);
 
   // Handle 404 Route Not Found
   app.use((_req: Request, _res: Response, next) => {

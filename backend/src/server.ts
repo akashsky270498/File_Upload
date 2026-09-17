@@ -5,7 +5,11 @@ import { logger } from './common/logger';
 import { connectPostgres, sequelize } from './infrastructure/postgres';
 import { connectRedis, redisClient } from './config/redis';
 import { connectRabbitMQ, closeRabbitMQ } from './config/rabbitmq';
+import { connectKafka, disconnectKafka } from './config/kafka';
+import { connectElasticsearch } from './config/elasticsearch';
+import { esIndexManager } from './infrastructure/elasticsearch/index.manager';
 import { startAllWorkers } from './workers';
+import { startAllKafkaConsumers } from './consumers';
 
 const startServer = async (): Promise<void> => {
   try {
@@ -19,10 +23,18 @@ const startServer = async (): Promise<void> => {
     await connectRabbitMQ();
     await startAllWorkers();
 
-    // 4. Instantiate Express Application
+    // 4. Connect to Kafka Brokers & Start Event Consumers
+    await connectKafka();
+    await startAllKafkaConsumers();
+
+    // 5. Connect to Elasticsearch & Initialize Index Mapping
+    await connectElasticsearch();
+    await esIndexManager.initFilesIndex();
+
+    // 6. Instantiate Express Application
     const app = createApp();
 
-    // 5. Start HTTP Server Listener
+    // 6. Start HTTP Server Listener
     const server = app.listen(env.port, () => {
       logger.info(`Server running in [${env.nodeEnv}] mode on http://localhost:${env.port}`);
     });
@@ -41,6 +53,9 @@ const startServer = async (): Promise<void> => {
 
           await closeRabbitMQ();
           logger.info('RabbitMQ connection closed.');
+
+          await disconnectKafka();
+          logger.info('Kafka producer & consumers disconnected.');
 
           process.exit(0);
         } catch (err) {

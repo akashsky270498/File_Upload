@@ -17,6 +17,8 @@ const envSchema = Joi.object({
   REDIS_PORT: Joi.number().default(6379),
   REDIS_PASSWORD: Joi.string().allow('').optional(),
   RABBITMQ_URL: Joi.string().default('amqp://omnimedia:omnimedia_password@127.0.0.1:5672'),
+  KAFKA_BROKERS: Joi.string().default('localhost:9092'),
+  ELASTICSEARCH_NODE: Joi.string().default('http://localhost:9200'),
   CLIENT_URL: Joi.string().default('http://localhost:5173'),
   JWT_ACCESS_SECRET: Joi.string().default('super_secret_access_key_12345!@#$%'),
   JWT_ACCESS_EXPIRATION: Joi.string().default('15m'),
@@ -49,6 +51,12 @@ export const env = {
   },
   rabbitmq: {
     url: envVars.RABBITMQ_URL as string,
+  },
+  kafka: {
+    brokers: (envVars.KAFKA_BROKERS as string).split(','),
+  },
+  elasticsearch: {
+    node: envVars.ELASTICSEARCH_NODE as string,
   },
   jwt: {
     accessSecret: envVars.JWT_ACCESS_SECRET as string,

@@ -8,6 +8,7 @@ import { logger } from '../../common/logger';
 import { authRepository, AuthRepository } from './auth.repository';
 import { RegisterDTO, AuthTokensResponse } from './auth.interface';
 import { rabbitMQProducer } from '../../infrastructure/rabbitmq/rabbitmq.producer';
+import { kafkaProducerService } from '../../infrastructure/kafka/kafka.producer';
 
 export class AuthService {
   constructor(private readonly repository: AuthRepository = authRepository) {}
@@ -35,11 +36,24 @@ export class AuthService {
 
     logger.info({ userId: user.id, email: user.email }, 'User registered successfully. Queuing welcome email job...');
 
-    // Publish background job to RabbitMQ email.queue
+    // 1. Publish background job to RabbitMQ email.queue
     await rabbitMQProducer.publishEmailJob('send-welcome-email', {
       userId: user.id,
       email: user.email,
       firstName: user.firstName,
+    });
+
+    // 2. Publish Domain Event to Kafka omnimedia.user.events
+    await kafkaProducerService.publishUserEvent('USER_REGISTERED', user.id, {
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+    });
+
+    // 3. Publish Audit Event to Kafka omnimedia.audit.events
+    await kafkaProducerService.publishAuditEvent('USER_REGISTERED', user.id, {
+      resource: 'user',
+      resourceId: user.id,
     });
 
     return {

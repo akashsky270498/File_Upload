@@ -6,6 +6,8 @@ import { UploadInputDTO, UploadResponseDTO } from './upload.interface';
 import { ValidationError, AppError } from '../../common/errors/app-error';
 import { logger } from '../../common/logger';
 import { rabbitMQProducer } from '../../infrastructure/rabbitmq/rabbitmq.producer';
+import { kafkaProducerService } from '../../infrastructure/kafka/kafka.producer';
+import { esIndexManager } from '../../infrastructure/elasticsearch/index.manager';
 
 export class UploadService {
   constructor(
@@ -72,6 +74,27 @@ export class UploadService {
           fileType: dto.uploadType,
         });
       }
+
+      // 5. Publish Domain Event to Kafka omnimedia.media.events
+      await kafkaProducerService.publishMediaEvent('MEDIA_UPLOADED', fileRecord.id, {
+        userId,
+        fileType: fileRecord.fileType,
+        cloudinaryUrl: fileRecord.cloudinaryUrl,
+      });
+
+      // 6. Index document into Elasticsearch
+      await esIndexManager.indexFile({
+        id: fileRecord.id,
+        userId: fileRecord.userId,
+        title: fileRecord.title,
+        description: fileRecord.description || undefined,
+        fileType: fileRecord.fileType,
+        mimeType: fileRecord.mimeType,
+        size: Number(fileRecord.size),
+        cloudinaryUrl: fileRecord.cloudinaryUrl,
+        tags: tagNames,
+        createdAt: new Date().toISOString(),
+      });
 
       return {
         id: fileRecord.id,
