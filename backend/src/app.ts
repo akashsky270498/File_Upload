@@ -7,6 +7,8 @@ import { swaggerSpec } from './config/swagger';
 import { errorHandler } from './common/middleware/error-handler';
 import { NotFoundError } from './common/errors/app-error';
 import { rateLimitMiddleware } from './common/middleware/rate-limit.middleware';
+import { metricsMiddleware } from './common/middleware/metrics.middleware';
+import { registry } from './config/metrics';
 import authRoutes from './modules/auth/auth.routes';
 import uploadRoutes from './modules/uploads/upload.routes';
 import searchRoutes from './modules/search/search.routes';
@@ -25,6 +27,19 @@ export const createApp = async (): Promise<Express> => {
   );
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+  // Prometheus Metrics Collection Middleware
+  app.use(metricsMiddleware);
+
+  // Prometheus Metrics Exposition Endpoint
+  app.get('/metrics', async (_req: Request, res: Response) => {
+    try {
+      res.set('Content-Type', registry.contentType);
+      res.end(await registry.metrics());
+    } catch (err) {
+      res.status(500).end(err);
+    }
+  });
 
   // Basic Health Check Endpoint
   app.get('/health', (_req: Request, res: Response) => {

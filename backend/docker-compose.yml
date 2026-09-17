@@ -90,6 +90,29 @@ services:
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
 
+  prometheus:
+    image: prom/prometheus:v2.47.2
+    container_name: omnimedia_prometheus
+    restart: always
+    ports:
+      - '9090:9090'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: omnimedia_grafana
+    restart: always
+    ports:
+      - '3000:3000'
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+
 volumes:
   postgres_data:
     driver: local
@@ -98,4 +121,8 @@ volumes:
   rabbitmq_data:
     driver: local
   elasticsearch_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
     driver: local
