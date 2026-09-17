@@ -3,16 +3,20 @@ import { createApp } from './app';
 import { env } from './config/env';
 import { logger } from './common/logger';
 import { connectPostgres, sequelize } from './infrastructure/postgres';
+import { connectRedis, redisClient } from './config/redis';
 
 const startServer = async (): Promise<void> => {
   try {
     // 1. Connect to PostgreSQL Database
     await connectPostgres();
 
-    // 2. Instantiate Express Application
+    // 2. Connect to Redis Instance
+    await connectRedis();
+
+    // 3. Instantiate Express Application
     const app = createApp();
 
-    // 3. Start HTTP Server Listener
+    // 4. Start HTTP Server Listener
     const server = app.listen(env.port, () => {
       logger.info(`Server running in [${env.nodeEnv}] mode on http://localhost:${env.port}`);
     });
@@ -25,6 +29,10 @@ const startServer = async (): Promise<void> => {
         try {
           await sequelize.close();
           logger.info('PostgreSQL connection pool closed.');
+
+          redisClient.disconnect();
+          logger.info('Redis connection client closed.');
+
           process.exit(0);
         } catch (err) {
           logger.error({ err }, 'Error during database disconnection.');

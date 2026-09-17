@@ -13,6 +13,9 @@ const envSchema = Joi.object({
   DB_USER: Joi.string().required(),
   DB_PASSWORD: Joi.string().required(),
   DB_LOGGING: Joi.boolean().default(false),
+  REDIS_HOST: Joi.string().default('localhost'),
+  REDIS_PORT: Joi.number().default(6379),
+  REDIS_PASSWORD: Joi.string().allow('').optional(),
   CLIENT_URL: Joi.string().default('http://localhost:5173'),
   JWT_ACCESS_SECRET: Joi.string().default('super_secret_access_key_12345!@#$%'),
   JWT_ACCESS_EXPIRATION: Joi.string().default('15m'),
@@ -37,6 +40,11 @@ export const env = {
     user: envVars.DB_USER as string,
     password: envVars.DB_PASSWORD as string,
     logging: envVars.DB_LOGGING as boolean,
+  },
+  redis: {
+    host: envVars.REDIS_HOST as string,
+    port: envVars.REDIS_PORT as number,
+    password: envVars.REDIS_PASSWORD as string || undefined,
   },
   jwt: {
     accessSecret: envVars.JWT_ACCESS_SECRET as string,
