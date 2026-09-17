@@ -17,8 +17,8 @@ import { socketGateway } from './modules/notifications/socket.gateway';
 
 const startServer = async (): Promise<void> => {
   try {
-    // 0. Initialize OpenTelemetry Distributed Tracing
-    await initTracing();
+    // 0. Initialize OpenTelemetry Distributed Tracing (non-blocking)
+    initTracing().catch(() => {});
 
     // 1. Connect to PostgreSQL Database
     await connectPostgres();
