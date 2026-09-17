@@ -1,6 +1,7 @@
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import swaggerUi from 'swagger-ui-express';
 import { env } from './config/env';
 import { swaggerSpec } from './config/swagger';
@@ -12,6 +13,8 @@ import { registry } from './config/metrics';
 import authRoutes from './modules/auth/auth.routes';
 import uploadRoutes from './modules/uploads/upload.routes';
 import searchRoutes from './modules/search/search.routes';
+import usersRoutes from './modules/users/users.routes';
+
 import { setupGraphQL } from './graphql';
 
 export const createApp = async (): Promise<Express> => {
@@ -23,8 +26,10 @@ export const createApp = async (): Promise<Express> => {
     cors({
       origin: env.clientUrl,
       credentials: true,
+      exposedHeaders: ['X-Access-Token', 'X-Refresh-Token', 'Set-Cookie'],
     })
   );
+  app.use(cookieParser());
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -61,6 +66,9 @@ export const createApp = async (): Promise<Express> => {
   app.use('/api/v1/auth', rateLimitMiddleware(10, 60), authRoutes);
   app.use('/api/v1/uploads', rateLimitMiddleware(5, 60), uploadRoutes);
   app.use('/api/v1/search', rateLimitMiddleware(20, 60), searchRoutes);
+  app.use('/api/v1/users', rateLimitMiddleware(20, 60), usersRoutes);
+
+
 
   // Handle 404 Route Not Found
   app.use((_req: Request, _res: Response, next) => {

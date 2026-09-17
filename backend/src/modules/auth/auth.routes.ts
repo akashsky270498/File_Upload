@@ -65,12 +65,6 @@ router.post(
   authController.resetPassword
 );
 
-router.get(
-  '/me',
-  authenticateJwt,
-  authController.getMe
-);
-
 router.post(
   '/change-password',
   authenticateJwt,

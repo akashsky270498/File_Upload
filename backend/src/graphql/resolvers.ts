@@ -4,6 +4,9 @@ import { File } from '../infrastructure/postgres/models/file.model';
 import { Notification } from '../infrastructure/postgres/models/notification.model';
 import { AuditLog } from '../infrastructure/postgres/models/audit-log.model';
 import { GraphQLContext } from './context';
+import { usersService } from '../modules/users/users.service';
+
+import { uploadRepository } from '../modules/uploads/upload.repository';
 
 export const resolvers = {
   Query: {
@@ -45,19 +48,21 @@ export const resolvers = {
         limit,
         offset,
         order: [['createdAt', 'DESC']],
+        include: [{ model: User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email', 'profileImage'] }],
       });
 
       return files;
     },
 
     file: async (_parent: any, args: { id: string }) => {
-      const file = await File.findByPk(args.id);
-      if (!file) {
-        throw new GraphQLError(`File with ID '${args.id}' not found`, {
+      try {
+        const file = await uploadRepository.findByIdAndIncrementView(args.id);
+        return file;
+      } catch (err: any) {
+        throw new GraphQLError(err.message || `File with ID '${args.id}' not found`, {
           extensions: { code: 'NOT_FOUND', http: { status: 404 } },
         });
       }
-      return file;
     },
 
     myNotifications: async (_parent: any, args: { limit?: number }, context: GraphQLContext) => {
@@ -90,8 +95,38 @@ export const resolvers = {
     },
   },
 
+  Mutation: {
+    updateProfile: async (_parent: any, args: { input: { firstName?: string; lastName?: string; mobileNumber?: string; profileImageUrl?: string; profileImage?: string } }, context: GraphQLContext) => {
+      if (!context.currentUser) {
+        throw new GraphQLError('Authentication token required', {
+          extensions: { code: 'UNAUTHENTICATED', http: { status: 401 } },
+        });
+      }
+
+      try {
+        const dto = {
+          firstName: args.input.firstName,
+          lastName: args.input.lastName,
+          mobileNumber: args.input.mobileNumber,
+          profileImage: args.input.profileImage || args.input.profileImageUrl,
+        };
+
+        const updatedProfile = await usersService.updateProfile(context.currentUser.userId, dto);
+        const user = await User.findByPk(updatedProfile.id);
+        return user;
+      } catch (err: any) {
+        throw new GraphQLError(err.message || 'Failed to update profile', {
+          extensions: { code: err.errorCode || 'BAD_USER_INPUT', http: { status: err.statusCode || 400 } },
+        });
+      }
+    },
+  },
+
   File: {
+    viewsCount: (parent: File) => Number(parent.viewsCount) || 0,
+
     user: async (parent: File, _args: any, context: GraphQLContext) => {
+      if ((parent as any).user) return (parent as any).user;
       if (!parent.userId) return null;
       return context.loaders.userDataLoader.load(parent.userId);
     },
@@ -102,6 +137,9 @@ export const resolvers = {
   },
 
   User: {
+    profileImage: (parent: User) => parent.profileImage,
+    profileImageUrl: (parent: User) => parent.profileImage,
+    coverImageUrl: (parent: User) => parent.coverImage,
     files: async (parent: User) => {
       return File.findAll({
         where: { userId: parent.id },
@@ -110,3 +148,4 @@ export const resolvers = {
     },
   },
 };
+

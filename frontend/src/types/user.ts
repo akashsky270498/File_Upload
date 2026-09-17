@@ -7,6 +7,8 @@ export interface User {
   role: 'USER' | 'ADMIN';
   mobileNumber?: string | null;
   avatarUrl?: string;
+  profileImage?: string;
+  profileImageUrl?: string;
   createdAt?: string;
 }
 
@@ -22,5 +24,6 @@ export interface AuthState {
   isLoading: boolean;
   error: string | null;
   otpSent: boolean;
+  otpEmail?: string | null;
   forgotPasswordStep: 'REQUEST' | 'VERIFY' | 'SUCCESS';
 }

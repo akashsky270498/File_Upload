@@ -3,6 +3,7 @@ import { User } from './user.model';
 
 export enum NotificationType {
   SYSTEM = 'SYSTEM',
+  FILE_UPLOADED = 'FILE_UPLOADED',
   FILE_PROCESSED = 'FILE_PROCESSED',
   FILE_FAILED = 'FILE_FAILED',
   WELCOME = 'WELCOME',
@@ -29,7 +30,7 @@ export class Notification extends Model {
   user!: User;
 
   @AllowNull(false)
-  @Column(DataType.ENUM(...Object.values(NotificationType)))
+  @Column(DataType.STRING(50))
   type!: NotificationType;
 
   @AllowNull(false)

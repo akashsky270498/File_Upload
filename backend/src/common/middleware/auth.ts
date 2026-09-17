@@ -8,13 +8,15 @@ export interface AuthenticatedRequest extends Request {
 }
 
 export const authenticateJwt = (req: AuthenticatedRequest, _res: Response, next: NextFunction): void => {
-  const authHeader = req.headers.authorization;
+  let token: string | undefined = req.cookies?.accessToken;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return next(new UnauthorizedError('Access token is missing or invalid format (Bearer expected)'));
+  if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    token = req.headers.authorization.split(' ')[1];
   }
 
-  const token = authHeader.split(' ')[1];
+  if (!token) {
+    return next(new UnauthorizedError('Access token is missing or unauthorized'));
+  }
 
   try {
     const payload = verifyAccessToken(token);

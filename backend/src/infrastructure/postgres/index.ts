@@ -31,6 +31,28 @@ export const connectPostgres = async (): Promise<void> => {
   try {
     await sequelize.authenticate();
     logger.info('PostgreSQL database connection established successfully.');
+    
+    // Safely add missing enum values if enum_notifications_type exists in PostgreSQL
+    try {
+      await sequelize.query(`
+        DO $$ 
+        BEGIN 
+          IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_notifications_type') THEN
+            BEGIN
+              ALTER TYPE "enum_notifications_type" ADD VALUE 'FILE_UPLOADED';
+            EXCEPTION WHEN OTHERS THEN null;
+            END;
+            BEGIN
+              ALTER TYPE "enum_notifications_type" ADD VALUE 'MEDIA_PROCESSED';
+            EXCEPTION WHEN OTHERS THEN null;
+            END;
+          END IF;
+        END $$;
+      `);
+    } catch (enumErr) {
+      logger.debug({ enumErr }, 'PostgreSQL enum update check bypassed');
+    }
+
     if (env.nodeEnv === 'development') {
       await sequelize.sync({ alter: true });
       logger.info('PostgreSQL database models synchronized.');

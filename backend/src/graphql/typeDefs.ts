@@ -27,6 +27,7 @@ export const typeDefs = `#graphql
     mobileNumber: String
     role: UserRole!
     status: UserStatus!
+    profileImage: String
     profileImageUrl: String
     coverImageUrl: String
     files: [File!]!
@@ -51,6 +52,7 @@ export const typeDefs = `#graphql
     size: String!
     cloudinaryUrl: String!
     cloudinaryPublicId: String!
+    viewsCount: Int
     tags: [Tag!]!
     createdAt: String!
   }
@@ -76,6 +78,13 @@ export const typeDefs = `#graphql
     createdAt: String!
   }
 
+  input UpdateProfileInput {
+    firstName: String
+    lastName: String
+    mobileNumber: String
+    profileImageUrl: String
+  }
+
   type Query {
     # Current authenticated user profile
     me: User
@@ -84,7 +93,7 @@ export const typeDefs = `#graphql
     user(id: ID!): User
 
     # Query files list with optional filtering & pagination
-    files(fileType: FileType, limit: Int = 10, offset: Int = 0): [File!]!
+    files(fileType: FileType, limit: Int = 20, offset: Int = 0): [File!]!
 
     # Query single file metadata by ID
     file(id: ID!): File
@@ -95,4 +104,10 @@ export const typeDefs = `#graphql
     # Query audit logs (Admin or system audit view)
     auditLogs(limit: Int = 50): [AuditLog!]!
   }
+
+  type Mutation {
+    # Update authenticated user profile
+    updateProfile(input: UpdateProfileInput!): User!
+  }
 `;
+

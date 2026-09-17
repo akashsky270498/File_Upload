@@ -5,6 +5,7 @@ export type FileType = 'image' | 'video' | 'audio' | 'pdf';
 
 export interface MediaFile {
   _id: string;
+  id?: string;
   title: string;
   description?: string;
   originalName: string;
@@ -12,14 +13,17 @@ export interface MediaFile {
   fileType: FileType;
   mimeType: string;
   size: number;
-  cloudinaryId: string;
+  cloudinaryId?: string;
+  cloudinaryUrl?: string;
   url: string;
   secureUrl: string;
   thumbnailUrl?: string;
-  uploader: User;
+  userId?: string;
+  uploader?: User;
+  user?: User;
   viewsCount: number;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
 }
 
 export interface SearchFilter {

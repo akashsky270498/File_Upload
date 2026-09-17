@@ -13,13 +13,16 @@ export interface GraphQLContext {
 
 export const buildGraphQLContext = async ({ req }: { req: Request }): Promise<GraphQLContext> => {
   const loaders = createDataLoaders();
-  const authHeader = req.headers.authorization;
+  let token: string | undefined = req.cookies?.accessToken;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+
+  if (!token) {
     return { currentUser: null, loaders };
   }
 
-  const token = authHeader.split(' ')[1];
   try {
     const payload = verifyAccessToken(token);
     return {

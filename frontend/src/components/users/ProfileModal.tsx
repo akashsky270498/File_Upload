@@ -66,15 +66,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
     setIsSavingProfile(true);
 
     try {
-      if (avatarFile) {
-        const formData = new FormData();
-        formData.append('firstName', firstName);
-        formData.append('lastName', lastName);
-        formData.append('avatar', avatarFile);
-        await usersApi.updateProfile(formData);
-      } else {
-        await usersApi.updateProfile({ firstName, lastName, avatarUrl: previewUrl });
-      }
+      await usersApi.updateProfile({
+        firstName,
+        lastName,
+        profileImage: avatarFile ? undefined : previewUrl,
+        avatarFile: avatarFile || undefined,
+      });
 
       dispatch(fetchCurrentUser());
       dispatch(showToast({ message: 'Profile updated successfully!', type: 'success' }));
@@ -122,7 +119,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-content modal-sm" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '540px', width: '90%', boxSizing: 'border-box' }}>
         <div className="modal-header">
           <h3>Account Settings</h3>
           <button className="btn-icon" onClick={onClose}>

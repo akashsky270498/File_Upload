@@ -31,5 +31,12 @@ export interface UploadResponseDTO {
   cloudinaryUrl: string;
   cloudinaryPublicId: string;
   tags: string[];
+  user?: {
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    email: string;
+    profileImage?: string;
+  };
   createdAt: Date;
 }

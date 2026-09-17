@@ -37,9 +37,10 @@ export const DashboardPage: React.FC = () => {
       <main className="dashboard-content">
         <div className="content-container">
           <FileFilterBar />
-          <FileGrid />
+          <FileGrid onOpenUpload={() => setIsUploadOpen(true)} />
         </div>
       </main>
+
 
       <UploadModal isOpen={isUploadOpen} onClose={() => setIsUploadOpen(false)} />
       <MediaPreviewModal />

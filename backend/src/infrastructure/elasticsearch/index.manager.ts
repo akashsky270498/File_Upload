@@ -1,5 +1,7 @@
 import { esClient, INDEX_NAMES } from '../../config/elasticsearch';
 import { logger } from '../../common/logger';
+import { File } from '../postgres/models/file.model';
+import { Tag } from '../postgres/models/tag.model';
 
 export interface FileSearchDocument {
   id: string;
@@ -11,6 +13,7 @@ export interface FileSearchDocument {
   size: number;
   cloudinaryUrl: string;
   tags: string[];
+  viewsCount?: number;
   createdAt: string;
 }
 
@@ -33,7 +36,7 @@ export class ElasticsearchIndexManager {
                 tokenizer: {
                   autocomplete_tokenizer: {
                     type: 'edge_ngram',
-                    min_gram: 2,
+                    min_gram: 1,
                     max_gram: 15,
                     token_chars: ['letter', 'digit'],
                   },
@@ -68,8 +71,16 @@ export class ElasticsearchIndexManager {
                 fileType: { type: 'keyword' },
                 mimeType: { type: 'keyword' },
                 size: { type: 'long' },
+                viewsCount: { type: 'long' },
                 cloudinaryUrl: { type: 'keyword' },
-                tags: { type: 'keyword' },
+                tags: {
+                  type: 'text',
+                  analyzer: 'autocomplete_analyzer',
+                  search_analyzer: 'autocomplete_search_analyzer',
+                  fields: {
+                    keyword: { type: 'keyword' },
+                  },
+                },
                 createdAt: { type: 'date' },
               },
             },
@@ -78,11 +89,76 @@ export class ElasticsearchIndexManager {
 
         logger.info({ index: INDEX_NAMES.FILES }, 'Elasticsearch Index Manager: Created omnimedia_files index with edge_ngram autocomplete.');
       } else {
-        logger.info({ index: INDEX_NAMES.FILES }, 'Elasticsearch Index Manager: Index already exists.');
+        try {
+          await esClient.indices.putMapping({
+            index: INDEX_NAMES.FILES,
+            properties: {
+              viewsCount: { type: 'long' },
+            },
+          });
+          logger.info({ index: INDEX_NAMES.FILES }, 'Elasticsearch Index Manager: Updated index mapping with viewsCount property.');
+        } catch (err) {
+          logger.debug({ err }, 'Elasticsearch putMapping completed.');
+        }
       }
+
+      // Sync existing PostgreSQL records to Elasticsearch
+      await this.syncDatabaseToElasticsearch();
     } catch (error) {
       logger.error({ error }, 'Elasticsearch Index Manager: Failed to initialize index.');
       throw error;
+    }
+  }
+
+  /**
+   * Sync all existing PostgreSQL database files to Elasticsearch index on server boot
+   */
+  public async syncDatabaseToElasticsearch(): Promise<void> {
+    try {
+      const files = await File.findAll({
+        include: [
+          { model: Tag, as: 'tags', attributes: ['name'], through: { attributes: [] } },
+        ],
+      });
+
+      if (!files || files.length === 0) return;
+
+      const body = files.flatMap((f) => [
+        { index: { _index: INDEX_NAMES.FILES, _id: f.id } },
+        {
+          id: f.id,
+          userId: f.userId,
+          title: f.title,
+          description: f.description || undefined,
+          fileType: f.fileType,
+          mimeType: f.mimeType,
+          size: Number(f.size),
+          cloudinaryUrl: f.cloudinaryUrl,
+          tags: f.tags ? f.tags.map((t: any) => t.name) : [],
+          viewsCount: Number(f.viewsCount) || 0,
+          createdAt: f.createdAt ? new Date(f.createdAt).toISOString() : new Date().toISOString(),
+        },
+      ]);
+
+      await esClient.bulk({ refresh: 'wait_for', body });
+      logger.info({ count: files.length }, 'Elasticsearch Index Manager: Synchronized all database files to Elasticsearch index successfully.');
+    } catch (err) {
+      logger.error({ err }, 'Failed to sync database files to Elasticsearch');
+    }
+  }
+
+  /**
+   * Update views count for a specific file document in Elasticsearch
+   */
+  public async updateViewsCount(fileId: string, viewsCount: number): Promise<void> {
+    try {
+      await esClient.update({
+        index: INDEX_NAMES.FILES,
+        id: fileId,
+        doc: { viewsCount },
+      });
+    } catch (err) {
+      logger.debug({ err, fileId }, 'Elasticsearch updateViewsCount skipped.');
     }
   }
 

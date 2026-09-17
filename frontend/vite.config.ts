@@ -7,8 +7,16 @@ export default defineConfig({
   root: path.resolve(__dirname, './'),
   server: {
     port: 5173,
+    watch: {
+      usePolling: true,
+      interval: 100,
+    },
     proxy: {
       '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+      },
+      '/graphql': {
         target: 'http://localhost:5000',
         changeOrigin: true,
       },
@@ -19,3 +27,4 @@ export default defineConfig({
     emptyOutDir: true,
   },
 });
+

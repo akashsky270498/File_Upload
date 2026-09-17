@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { Mail, Lock, User as UserIcon, Layers, LogIn, UserPlus, KeyRound, ShieldCheck, Phone, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Layers, LogIn, KeyRound, ShieldCheck, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../store';
 import {
   loginUser,
-  registerUser,
   requestLoginOtp,
   verifyLoginOtp,
   forgotPassword,
@@ -13,7 +12,8 @@ import {
   setForgotPasswordStep,
 } from '../store/slices/authSlice';
 import { showToast } from '../store/slices/uiSlice';
-import { COUNTRY_CODES } from '../data/countryCodes';
+import { RegisterForm } from '../components/auth/RegisterForm';
+
 
 type AuthView = 'LOGIN' | 'REGISTER' | 'FORGOT_PASSWORD';
 type LoginMethod = 'PASSWORD' | 'OTP';
@@ -21,24 +21,32 @@ type LoginMethod = 'PASSWORD' | 'OTP';
 export const AuthPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const { isLoading, error, otpSent, forgotPasswordStep } = useAppSelector((state) => state.auth);
+  const reduxOtpEmail = useAppSelector((state) => state.auth.otpEmail);
 
   const [authView, setAuthView] = useState<AuthView>('LOGIN');
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('PASSWORD');
 
   // Form Fields
   const [email, setEmail] = useState('');
+  const [otpEmail, setOtpEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [countryCode, setCountryCode] = useState('+91');
-  const [phoneDigits, setPhoneDigits] = useState('');
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
+
+  React.useEffect(() => {
+    if (otpSent) {
+      setLoginMethod('OTP');
+      const activeEmail = reduxOtpEmail || otpEmail;
+      if (activeEmail && !email) {
+        setEmail(activeEmail);
+      }
+    }
+  }, [otpSent, reduxOtpEmail, otpEmail, email]);
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     dispatch(clearError());
-    const result = await dispatch(loginUser({ email, password }));
+    const result = await dispatch(loginUser({ email: email.trim(), password }));
     if (loginUser.fulfilled.match(result)) {
       dispatch(showToast({ message: 'Authentication successful! Welcome back.', type: 'success' }));
     } else {
@@ -49,7 +57,10 @@ export const AuthPage: React.FC = () => {
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     dispatch(clearError());
-    const result = await dispatch(requestLoginOtp(email));
+    const targetEmail = email.trim();
+    if (!targetEmail) return;
+    setOtpEmail(targetEmail);
+    const result = await dispatch(requestLoginOtp(targetEmail));
     if (requestLoginOtp.fulfilled.match(result)) {
       dispatch(showToast({ message: result.payload, type: 'success' }));
     } else {
@@ -60,42 +71,20 @@ export const AuthPage: React.FC = () => {
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     dispatch(clearError());
-    const result = await dispatch(verifyLoginOtp({ email, otp }));
+    const targetEmail = (email || reduxOtpEmail || otpEmail || '').trim();
+    if (!targetEmail) {
+      dispatch(showToast({ message: 'Email address is required for OTP verification.', type: 'error' }));
+      return;
+    }
+    if (!otp.trim() || otp.trim().length !== 6) {
+      dispatch(showToast({ message: 'Please enter a valid 6-digit OTP code.', type: 'error' }));
+      return;
+    }
+    const result = await dispatch(verifyLoginOtp({ email: targetEmail, otp: otp.trim() }));
     if (verifyLoginOtp.fulfilled.match(result)) {
       dispatch(showToast({ message: 'OTP verified! Welcome back.', type: 'success' }));
     } else {
       dispatch(showToast({ message: (result.payload as string) || 'Invalid OTP.', type: 'error' }));
-    }
-  };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    dispatch(clearError());
-
-    const cleanedDigits = phoneDigits.replace(/\D/g, '');
-    if (!cleanedDigits || cleanedDigits.length < 7) {
-      dispatch(showToast({ message: 'Please enter a valid mobile number.', type: 'error' }));
-      return;
-    }
-
-    const fullMobileNumber = `${countryCode}${cleanedDigits}`;
-
-    const result = await dispatch(
-      registerUser({
-        email,
-        password,
-        firstName,
-        lastName,
-        mobileNumber: fullMobileNumber,
-      })
-    );
-
-    if (registerUser.fulfilled.match(result)) {
-      dispatch(showToast({ message: 'Registration successful! Please log in.', type: 'success' }));
-      setAuthView('LOGIN');
-      setLoginMethod('PASSWORD');
-    } else {
-      dispatch(showToast({ message: (result.payload as string) || 'Registration failed.', type: 'error' }));
     }
   };
 
@@ -130,8 +119,15 @@ export const AuthPage: React.FC = () => {
 
   return (
     <div className="auth-page">
-      <div className="auth-container">
+      <div
+        className="auth-container"
+        style={{
+          maxWidth: authView === 'REGISTER' ? '580px' : '440px',
+          transition: 'max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
+      >
         <div className="auth-brand">
+
           <div className="brand-icon-lg">
             <Layers size={36} />
           </div>
@@ -294,6 +290,20 @@ export const AuthPage: React.FC = () => {
                 ) : (
                   <form onSubmit={handleVerifyOtp}>
                     <div className="form-group">
+                      <label>Email Address *</label>
+                      <div className="input-wrapper">
+                        <Mail size={18} className="input-icon" />
+                        <input
+                          type="email"
+                          placeholder="alex@example.com"
+                          value={email || reduxOtpEmail || otpEmail || ''}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-group">
                       <label>Enter 6-Digit Verification Code *</label>
                       <div className="input-wrapper">
                         <ShieldCheck size={18} className="input-icon" />
@@ -303,11 +313,12 @@ export const AuthPage: React.FC = () => {
                           maxLength={6}
                           value={otp}
                           onChange={(e) => setOtp(e.target.value)}
+                          autoFocus
                           required
                         />
                       </div>
                       <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-                        OTP code sent to <b>{email}</b>. Valid for 5 minutes.
+                        OTP code sent to <b>{email || reduxOtpEmail || otpEmail}</b>. Valid for 5 minutes.
                       </small>
                     </div>
 
@@ -323,111 +334,9 @@ export const AuthPage: React.FC = () => {
 
           {/* VIEW 2: REGISTER */}
           {authView === 'REGISTER' && (
-            <form onSubmit={handleRegister}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <div className="form-group">
-                  <label>First Name *</label>
-                  <div className="input-wrapper">
-                    <UserIcon size={18} className="input-icon" />
-                    <input
-                      type="text"
-                      placeholder="Alex"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Last Name *</label>
-                  <div className="input-wrapper">
-                    <UserIcon size={18} className="input-icon" />
-                    <input
-                      type="text"
-                      placeholder="Mercer"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Email Address *</label>
-                <div className="input-wrapper">
-                  <Mail size={18} className="input-icon" />
-                  <input
-                    type="email"
-                    placeholder="alex@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Mobile Number *</label>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <select
-                    value={countryCode}
-                    onChange={(e) => setCountryCode(e.target.value)}
-                    style={{
-                      padding: '0.6rem 0.75rem',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-glass)',
-                      background: 'var(--bg-glass)',
-                      color: 'var(--text-main)',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      outline: 'none',
-                    }}
-                  >
-                    {COUNTRY_CODES.map((item) => (
-                      <option key={item.code} value={item.code} style={{ background: '#121826', color: '#ffffff' }}>
-                        {item.flag} {item.code} ({item.country})
-                      </option>
-                    ))}
-                  </select>
-
-                  <div className="input-wrapper" style={{ flex: 1 }}>
-                    <Phone size={18} className="input-icon" />
-                    <input
-                      type="tel"
-                      placeholder="9876543210"
-                      value={phoneDigits}
-                      onChange={(e) => setPhoneDigits(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Password *</label>
-                <div className="input-wrapper">
-                  <Lock size={18} className="input-icon" />
-                  <input
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-                  Min 8 chars, 1 uppercase, 1 lowercase, 1 number & 1 special symbol.
-                </small>
-              </div>
-
-              <button type="submit" className="btn btn-primary btn-block" disabled={isLoading}>
-                <UserPlus size={18} />
-                <span>{isLoading ? 'Creating Account...' : 'Create Account'}</span>
-              </button>
-            </form>
+            <RegisterForm onSwitchToLogin={() => switchView('LOGIN')} />
           )}
+
 
           {/* VIEW 3: FORGOT PASSWORD */}
           {authView === 'FORGOT_PASSWORD' && (

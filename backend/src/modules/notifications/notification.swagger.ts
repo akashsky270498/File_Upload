@@ -1,7 +1,7 @@
 /**
  * @openapi
- * /api/notifications/status:
- *   get:
+ * /api/v1/notifications/status:
+ *   post:
  *     summary: Retrieve real-time WebSocket Gateway status and active client connections count
  *     tags:
  *       - Notifications

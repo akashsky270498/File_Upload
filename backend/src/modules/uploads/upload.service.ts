@@ -1,4 +1,6 @@
 import { FileType } from '../../infrastructure/postgres/models/file.model';
+import { User } from '../../infrastructure/postgres/models/user.model';
+import { NotificationType } from '../../infrastructure/postgres/models/notification.model';
 import { UploadStrategyFactory } from './upload.strategy';
 import { uploadRepository, UploadRepository } from './upload.repository';
 import { cloudinaryService, CloudinaryService, CloudinaryUploadResult } from '../../config/cloudinary';
@@ -8,6 +10,8 @@ import { logger } from '../../common/logger';
 import { rabbitMQProducer } from '../../infrastructure/rabbitmq/rabbitmq.producer';
 import { kafkaProducerService } from '../../infrastructure/kafka/kafka.producer';
 import { esIndexManager } from '../../infrastructure/elasticsearch/index.manager';
+import { notificationService } from '../notifications/notification.service';
+import { socketGateway } from '../notifications/socket.gateway';
 
 export class UploadService {
   constructor(
@@ -93,10 +97,28 @@ export class UploadService {
         size: Number(fileRecord.size),
         cloudinaryUrl: fileRecord.cloudinaryUrl,
         tags: tagNames,
+        viewsCount: 0,
         createdAt: new Date().toISOString(),
       });
 
-      return {
+      // 7. Fetch uploader user details for instant UI metadata rendering
+      const userRecord = await User.findByPk(userId, {
+        attributes: ['id', 'firstName', 'lastName', 'email', 'profileImage'],
+      });
+
+      const uploader = userRecord
+        ? {
+            id: userRecord.id,
+            firstName: userRecord.firstName,
+            lastName: userRecord.lastName,
+            email: userRecord.email,
+            profileImage: userRecord.profileImage,
+          }
+        : undefined;
+
+      const uploaderName = userRecord ? `${userRecord.firstName} ${userRecord.lastName}`.trim() : 'System';
+
+      const responseDto: UploadResponseDTO = {
         id: fileRecord.id,
         userId: fileRecord.userId,
         originalName: fileRecord.originalName,
@@ -109,7 +131,32 @@ export class UploadService {
         cloudinaryPublicId: fileRecord.cloudinaryPublicId,
         tags: tagNames,
         createdAt: fileRecord.createdAt,
+        user: uploader,
       };
+
+      // 8. Save Notification record to PostgreSQL DB and push real-time Socket.IO notification to uploader
+      try {
+        await notificationService.createAndSendNotification({
+          userId,
+          title: 'Media Asset Published',
+          message: `Your asset "${fileRecord.title}" has been published successfully.`,
+          type: NotificationType.FILE_UPLOADED,
+        });
+      } catch (notifErr) {
+        logger.error({ notifErr }, 'Failed to trigger upload notification');
+      }
+
+      // 9. Broadcast real-time live feed update to ALL connected users
+      try {
+        socketGateway.broadcast('file:uploaded', {
+          ...responseDto,
+          uploaderName,
+        });
+      } catch (broadcastErr) {
+        logger.error({ broadcastErr }, 'Failed to broadcast file:uploaded socket event');
+      }
+
+      return responseDto;
     } catch (error) {
       // 5. COMPENSATING TRANSACTION: If PostgreSQL database save fails, clean up Cloudinary asset
       if (cloudinaryResult?.public_id) {
@@ -145,6 +192,45 @@ export class UploadService {
         500,
         'UPLOAD_PROCESSING_ERROR'
       );
+    }
+  }
+
+  /**
+   * Delete media asset from PostgreSQL DB, Cloudinary, and Elasticsearch
+   */
+  public async deleteMedia(id: string, userId: string, userRole: string): Promise<void> {
+    const isAdmin = userRole === 'ADMIN';
+    const deletedFile = await this.repository.deleteFileRecord(id, userId, isAdmin);
+
+    // Delete Cloudinary asset if public ID is present
+    if (deletedFile.cloudinaryPublicId) {
+      try {
+        const strategy = UploadStrategyFactory.getStrategy(deletedFile.fileType);
+        await this.cloudinary.deleteAsset(deletedFile.cloudinaryPublicId, strategy.resourceType);
+      } catch (err) {
+        logger.error({ fileId: id, publicId: deletedFile.cloudinaryPublicId, err }, 'Failed to delete asset from Cloudinary');
+      }
+    }
+
+    // Remove document from Elasticsearch index
+    try {
+      await esIndexManager.deleteFile(id);
+    } catch (err) {
+      logger.error({ fileId: id, err }, 'Failed to delete file from Elasticsearch index');
+    }
+
+    // Publish Kafka event
+    try {
+      await kafkaProducerService.publishMediaEvent('MEDIA_DELETED', id, { userId });
+    } catch (err) {
+      logger.error({ fileId: id, err }, 'Failed to publish MEDIA_DELETED Kafka event');
+    }
+
+    // Broadcast real-time deletion event to ALL connected socket clients
+    try {
+      socketGateway.broadcast('file:deleted', { id, fileId: id });
+    } catch (broadcastErr) {
+      logger.error({ broadcastErr, fileId: id }, 'Failed to broadcast file:deleted socket event');
     }
   }
 }

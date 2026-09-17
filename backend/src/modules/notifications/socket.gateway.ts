@@ -35,9 +35,18 @@ export class SocketGateway {
 
     // 1. Authentication Middleware for Socket Connection Handshake
     this.io.use((socket: AuthenticatedSocket, next) => {
-      const token =
+      let token =
         socket.handshake.auth?.token ||
         socket.handshake.headers?.authorization?.replace('Bearer ', '');
+
+      if (!token && socket.handshake.headers?.cookie) {
+        const cookies = socket.handshake.headers.cookie.split(';').reduce((acc: Record<string, string>, item: string) => {
+          const [k, v] = item.trim().split('=');
+          if (k && v) acc[k] = decodeURIComponent(v);
+          return acc;
+        }, {});
+        token = cookies.accessToken;
+      }
 
       if (!token) {
         logger.warn('Socket Connection Rejected: Missing authentication token.');

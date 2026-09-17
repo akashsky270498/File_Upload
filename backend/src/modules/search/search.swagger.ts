@@ -1,73 +1,52 @@
 /**
  * @openapi
  * /api/v1/search:
- *   get:
- *     summary: Full-Text Search Files (Elasticsearch)
- *     description: Perform boosted full-text search across title, description, and tags with fuzzy matching, facets, and pagination.
+ *   post:
+ *     summary: Advanced Full-Text Search & Multi-Facet Filtering (Elasticsearch with PostgreSQL Fallback)
  *     tags:
- *       - Search
- *     parameters:
- *       - in: query
- *         name: q
- *         schema:
- *           type: string
- *         description: Search query keyword (matches title, description, tags with autocomplete and fuzzy matching)
- *       - in: query
- *         name: fileType
- *         schema:
- *           type: string
- *           enum: [PROFILE_IMAGE, COVER_IMAGE, POST_MEDIA, DOCUMENT, AUDIO, VIDEO]
- *         description: Filter search results by FileType
- *       - in: query
- *         name: tags
- *         schema:
- *           type: string
- *         description: Comma-separated list of tags to filter by (e.g. "nature,travel")
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
+ *       - Search & Discovery
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               q:
+ *                 type: string
+ *                 example: virat
+ *                 description: Full-text search term for title, tags, description, or filename
+ *               fileType:
+ *                 type: string
+ *                 enum: [all, image, pdf, video, audio, POST_MEDIA, DOCUMENT]
+ *                 example: all
+ *                 description: Filter results by media category
+ *               tags:
+ *                 type: string
+ *                 example: virat,cricket
+ *                 description: Comma-separated tag filter
+ *               sortBy:
+ *                 type: string
+ *                 enum: [relevance, views, date, size]
+ *                 example: relevance
+ *                 description: Ordering criteria
+ *               sortOrder:
+ *                 type: string
+ *                 enum: [asc, desc]
+ *                 example: desc
+ *                 description: Sort direction
+ *               page:
+ *                 type: integer
+ *                 example: 1
+ *                 description: Page number for pagination
+ *               limit:
+ *                 type: integer
+ *                 example: 12
+ *                 description: Page size limit
  *     responses:
  *       200:
- *         description: Search results with pagination and aggregated facets.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: success
- *                 data:
- *                   type: object
- *                   properties:
- *                     total:
- *                       type: integer
- *                       example: 42
- *                     page:
- *                       type: integer
- *                       example: 1
- *                     limit:
- *                       type: integer
- *                       example: 10
- *                     totalPages:
- *                       type: integer
- *                       example: 5
- *                     results:
- *                       type: array
- *                       items:
- *                         type: object
- *                     facets:
- *                       type: object
- *                       properties:
- *                         fileTypeCounts:
- *                           type: object
- *                         topTags:
- *                           type: object
+ *         description: Search executed successfully, returns matched files and facet aggregations
+ *       500:
+ *         description: Search processing error
  */
+export {};

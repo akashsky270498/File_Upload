@@ -63,7 +63,7 @@ export class DocumentStrategy extends BaseUploadStrategy {
     'text/plain',
   ];
   readonly cloudinaryFolder = 'documents';
-  readonly resourceType = 'raw' as const;
+  readonly resourceType = 'auto' as const;
 }
 
 export class AudioStrategy extends BaseUploadStrategy {

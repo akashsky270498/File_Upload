@@ -9,14 +9,13 @@ import {
   ChangePasswordPayload,
   AuthResponseData,
 } from '../../services/authApi';
-
-const initialToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+import { usersApi } from '../../services/usersApi';
 
 const initialState: AuthState = {
   user: null,
-  token: initialToken,
+  token: null,
   isAuthenticated: false,
-  isLoading: Boolean(initialToken),
+  isLoading: true,
   error: null,
   otpSent: false,
   forgotPasswordStep: 'REQUEST',
@@ -28,8 +27,6 @@ export const loginUser = createAsyncThunk<AuthResponseData, LoginPayload, { reje
     try {
       const response = await authApi.login(payload);
       if (response.success && response.data) {
-        localStorage.setItem('accessToken', response.data.accessToken);
-        localStorage.setItem('refreshToken', response.data.refreshToken);
         return response.data;
       }
       return rejectWithValue(response.message || 'Login failed');
@@ -78,8 +75,6 @@ export const verifyLoginOtp = createAsyncThunk<AuthResponseData, VerifyOtpPayloa
     try {
       const response = await authApi.verifyLoginOtp(payload);
       if (response.success && response.data) {
-        localStorage.setItem('accessToken', response.data.accessToken);
-        localStorage.setItem('refreshToken', response.data.refreshToken);
         return response.data;
       }
       return rejectWithValue(response.message || 'OTP verification failed');
@@ -142,7 +137,7 @@ export const fetchCurrentUser = createAsyncThunk<User, void, { rejectValue: stri
   'auth/fetchCurrentUser',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await authApi.getMe();
+      const response = await usersApi.getProfile();
       if (response.success && response.data) {
         return response.data;
       }
@@ -158,9 +153,6 @@ export const logoutUser = createAsyncThunk<void, void>('auth/logoutUser', async 
     await authApi.logout();
   } catch {
     // Ignore error on logout
-  } finally {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
   }
 });
 
@@ -185,8 +177,6 @@ const authSlice = createSlice({
       state.error = null;
       state.otpSent = false;
       state.forgotPasswordStep = 'REQUEST';
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
     },
   },
   extraReducers: (builder) => {
@@ -200,7 +190,6 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.isAuthenticated = true;
         state.user = action.payload.user;
-        state.token = action.payload.accessToken;
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;
@@ -225,13 +214,15 @@ const authSlice = createSlice({
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(requestLoginOtp.fulfilled, (state) => {
+      .addCase(requestLoginOtp.fulfilled, (state, action) => {
         state.isLoading = false;
         state.otpSent = true;
+        state.otpEmail = action.meta.arg;
       })
       .addCase(requestLoginOtp.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload || 'Failed to send OTP';
+        state.otpEmail = null;
       })
 
       // OTP Login Verify
@@ -243,7 +234,6 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.isAuthenticated = true;
         state.user = action.payload.user;
-        state.token = action.payload.accessToken;
         state.otpSent = false;
       })
       .addCase(verifyLoginOtp.rejected, (state, action) => {
@@ -306,8 +296,6 @@ const authSlice = createSlice({
         state.user = null;
         state.isAuthenticated = false;
         state.token = null;
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
       })
 
       // Logout

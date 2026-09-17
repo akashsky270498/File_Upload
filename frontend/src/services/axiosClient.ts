@@ -10,14 +10,9 @@ const axiosClient = axios.create({
 });
 
 
+// Remove Authorization header injection from localStorage (using HttpOnly cookies)
 axiosClient.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('accessToken');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
+  (config: InternalAxiosRequestConfig) => config,
   (error: unknown) => Promise.reject(error)
 );
 
@@ -32,25 +27,26 @@ axiosClient.interceptors.response.use(
     const status = errObj.response?.status;
     const requestUrl = originalRequest?.url || '';
 
-    // Bypass automatic token refresh for login, register, and refresh endpoints
+    // Bypass automatic token refresh for auth endpoints
     const isAuthEndpoint =
       requestUrl.includes('/auth/login') ||
       requestUrl.includes('/auth/register') ||
-      requestUrl.includes('/auth/refresh');
+      requestUrl.includes('/auth/refresh') ||
+      requestUrl.includes('/auth/logout');
 
     if (status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true;
       try {
-        const refreshResponse = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, { withCredentials: true });
-        const newAccessToken = refreshResponse.data.data.accessToken;
-        localStorage.setItem('accessToken', newAccessToken);
+        // Send empty body; backend reads refreshToken from HttpOnly cookie
+        await axios.post(
+          `${API_BASE_URL}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        );
 
-        if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-        }
+        // Re-execute original request with new HttpOnly cookie attached
         return axiosClient(originalRequest);
       } catch (refreshErr) {
-        localStorage.removeItem('accessToken');
         window.dispatchEvent(new Event('auth:logout'));
         return Promise.reject(refreshErr);
       }

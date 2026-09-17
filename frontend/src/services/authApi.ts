@@ -36,8 +36,6 @@ export interface ChangePasswordPayload {
 }
 
 export interface AuthResponseData {
-  accessToken: string;
-  refreshToken: string;
   user: User;
 }
 
@@ -78,14 +76,7 @@ export const authApi = {
   },
 
   logout: async (): Promise<ApiResponse<{ message: string }>> => {
-    const res = await axiosClient.post<ApiResponse<{ message: string }>>('/auth/logout', {
-      refreshToken: localStorage.getItem('refreshToken') || '',
-    });
-    return res.data;
-  },
-
-  getMe: async (): Promise<ApiResponse<User>> => {
-    const res = await axiosClient.get<ApiResponse<User>>('/auth/me');
+    const res = await axiosClient.post<ApiResponse<{ message: string }>>('/auth/logout', {});
     return res.data;
   },
 };

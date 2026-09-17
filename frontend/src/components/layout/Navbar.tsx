@@ -173,8 +173,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenUpload }) => {
                   title="Edit Profile"
                 >
                   <div className="user-avatar">
-                    {user?.avatarUrl ? (
-                      <img src={user.avatarUrl} alt={user ? `${user.firstName} ${user.lastName}` : ''} />
+                    {user?.avatarUrl || user?.profileImage || user?.profileImageUrl ? (
+                      <img src={user.avatarUrl || user.profileImage || user.profileImageUrl} alt={user ? `${user.firstName} ${user.lastName}` : ''} />
                     ) : (
                       <span className="avatar-initials">
                         {getInitials(user ? `${user.firstName} ${user.lastName}` : '')}

@@ -4,6 +4,8 @@ import { File, FileStatus, FileType } from '../../infrastructure/postgres/models
 import { Tag } from '../../infrastructure/postgres/models/tag.model';
 import { FileTag } from '../../infrastructure/postgres/models/file-tag.model';
 import { User } from '../../infrastructure/postgres/models/user.model';
+import { NotFoundError, ForbiddenError } from '../../common/errors/app-error';
+import { esIndexManager } from '../../infrastructure/elasticsearch/index.manager';
 
 export interface CreateFileRecordData {
   userId: string;
@@ -82,6 +84,45 @@ export class UploadRepository {
 
       return { file: fileRecord, tagNames };
     });
+  }
+
+  /**
+   * Find file by primary key ID and increment views_count atomically
+   */
+  public async findByIdAndIncrementView(id: string): Promise<File> {
+    await sequelize.query('UPDATE files SET views_count = views_count + 1 WHERE id = :id', {
+      replacements: { id },
+    });
+
+    const file = await File.findByPk(id, {
+      include: [{ model: User, as: 'user', attributes: ['id', 'firstName', 'lastName', 'email', 'profileImage'] }],
+    });
+
+    if (!file) {
+      throw new NotFoundError(`File with ID '${id}' not found`);
+    }
+
+    // Sync updated viewsCount to Elasticsearch in real time
+    await esIndexManager.updateViewsCount(id, Number(file.viewsCount) || 0);
+
+    return file;
+  }
+
+  /**
+   * Delete file record from PostgreSQL database with ownership verification
+   */
+  public async deleteFileRecord(id: string, userId: string, isAdmin: boolean): Promise<File> {
+    const file = await File.findByPk(id);
+    if (!file) {
+      throw new NotFoundError(`File with ID '${id}' not found`);
+    }
+
+    if (file.userId !== userId && !isAdmin) {
+      throw new ForbiddenError('You do not have permission to delete this file');
+    }
+
+    await file.destroy();
+    return file;
   }
 }
 

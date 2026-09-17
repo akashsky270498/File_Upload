@@ -15,12 +15,12 @@ export const App: React.FC = () => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // Restore user session on app load or refresh
+  // Restore user session on app load or refresh via HttpOnly cookie
   useEffect(() => {
-    if (token && !user) {
+    if (!user) {
       dispatch(fetchCurrentUser());
     }
-  }, [dispatch, token, user]);
+  }, [dispatch, user]);
 
   // Listen for refresh token failure events
   useEffect(() => {

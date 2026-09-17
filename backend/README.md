@@ -124,7 +124,7 @@ npx tsc --noEmit
 | **Health Check Endpoint** | HTTP | `http://localhost:5000/health` | N/A |
 | **Prometheus Metrics** | HTTP | `http://localhost:5000/metrics` | N/A |
 | **Prometheus Server UI** | HTTP | `http://localhost:9090` | N/A |
-| **Grafana Dashboards** | HTTP | `http://localhost:3000` | `admin` / `admin` |
+| **Grafana Dashboards** | HTTP | `http://localhost:3000` | `admin` / `omnimedia` |
 | **Jaeger Tracing UI** | HTTP | `http://localhost:16686` | N/A |
 | **RabbitMQ Console** | HTTP | `http://localhost:15672` | `omnimedia` / `omnimedia_password` |
 | **Elasticsearch Cluster** | HTTP | `http://localhost:9200` | N/A |

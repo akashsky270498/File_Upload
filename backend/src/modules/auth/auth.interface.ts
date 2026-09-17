@@ -32,6 +32,8 @@ export interface UserAuthProfile {
   firstName: string;
   lastName: string;
   role: UserRole;
+  mobileNumber?: string;
+  profileImage?: string;
 }
 
 export interface AuthTokensResponse {

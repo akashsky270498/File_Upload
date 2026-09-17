@@ -52,6 +52,22 @@ export const uploadFileThunk = createAsyncThunk<MediaFile, { formData: FormData;
   }
 );
 
+export const uploadBatchThunk = createAsyncThunk<MediaFile[], { formData: FormData; onProgress?: (p: number) => void }, { rejectValue: string }>(
+  'files/uploadBatch',
+  async ({ formData, onProgress }, { rejectWithValue }) => {
+    try {
+      const response = await filesApi.uploadBatchFiles(formData, onProgress);
+      if (response.success && Array.isArray(response.data)) {
+        return response.data;
+      }
+      return rejectWithValue(response.message || 'Batch upload failed');
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Batch upload error';
+      return rejectWithValue(errorMsg);
+    }
+  }
+);
+
 export const fetchFileDetails = createAsyncThunk<MediaFile, string, { rejectValue: string }>(
   'files/fetchFileDetails',
   async (id, { rejectWithValue }) => {
@@ -122,6 +138,20 @@ const filesSlice = createSlice({
       state.notificationsHistory = [];
       state.unreadCount = 0;
     },
+    addLiveFile: (state, action: PayloadAction<MediaFile>) => {
+      const incomingId = action.payload.id || action.payload._id;
+      const existing = state.files.some((f) => (f.id || f._id) === incomingId);
+      if (!existing) {
+        state.files.unshift(action.payload);
+      }
+    },
+    removeLiveFile: (state, action: PayloadAction<string>) => {
+      const targetId = action.payload;
+      state.files = state.files.filter((f) => (f.id || f._id) !== targetId);
+      if (state.selectedFile && (state.selectedFile.id || state.selectedFile._id) === targetId) {
+        state.selectedFile = null;
+      }
+    },
     clearFileError: (state) => {
       state.error = null;
     },
@@ -135,15 +165,44 @@ const filesSlice = createSlice({
       })
       .addCase(fetchFiles.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.files = action.payload.data || [];
-        state.meta = action.payload.meta || null;
+        const payload = action.payload as any;
+        const resData = payload?.data;
+        let incomingFiles: MediaFile[] = [];
+
+        if (Array.isArray(resData)) {
+          incomingFiles = resData;
+          state.meta = payload.meta || null;
+        } else if (resData && Array.isArray(resData.results)) {
+          incomingFiles = resData.results;
+          state.meta = {
+            total: resData.total || 0,
+            page: resData.page || 1,
+            limit: resData.limit || 12,
+            totalPages: resData.totalPages || 0,
+          };
+        } else {
+          incomingFiles = [];
+          state.meta = null;
+        }
+
+        // For page 1, replace file list. For page > 1 (infinite scroll), append unique items.
+        if (state.filters.page === 1) {
+          state.files = incomingFiles;
+        } else {
+          const existingIds = new Set(state.files.map((f) => f._id || f.id));
+          const newUniqueFiles = incomingFiles.filter((f) => !existingIds.has(f._id || f.id));
+          state.files = [...state.files, ...newUniqueFiles];
+        }
       })
       .addCase(fetchFiles.rejected, (state, action) => {
         state.isLoading = false;
+        if (state.filters.page === 1) {
+          state.files = [];
+        }
         state.error = action.payload || 'Failed to fetch media files';
       })
 
-      // Upload File
+      // Upload Single File
       .addCase(uploadFileThunk.pending, (state) => {
         state.isUploading = true;
         state.uploadProgress = 0;
@@ -152,7 +211,11 @@ const filesSlice = createSlice({
       .addCase(uploadFileThunk.fulfilled, (state, action: PayloadAction<MediaFile>) => {
         state.isUploading = false;
         state.uploadProgress = 100;
-        state.files.unshift(action.payload);
+        const incomingId = action.payload.id || action.payload._id;
+        const existing = state.files.some((f) => (f.id || f._id) === incomingId);
+        if (!existing) {
+          state.files.unshift(action.payload);
+        }
       })
       .addCase(uploadFileThunk.rejected, (state, action) => {
         state.isUploading = false;
@@ -160,19 +223,45 @@ const filesSlice = createSlice({
         state.error = action.payload || 'Upload failed';
       })
 
+      // Upload Batch Files (up to 5 files)
+      .addCase(uploadBatchThunk.pending, (state) => {
+        state.isUploading = true;
+        state.uploadProgress = 0;
+        state.error = null;
+      })
+      .addCase(uploadBatchThunk.fulfilled, (state, action: PayloadAction<MediaFile[]>) => {
+        state.isUploading = false;
+        state.uploadProgress = 100;
+        if (Array.isArray(action.payload)) {
+          action.payload.forEach((f) => {
+            const incId = f.id || f._id;
+            if (!state.files.some((existing) => (existing.id || existing._id) === incId)) {
+              state.files.unshift(f);
+            }
+          });
+        }
+      })
+      .addCase(uploadBatchThunk.rejected, (state, action) => {
+        state.isUploading = false;
+        state.uploadProgress = 0;
+        state.error = action.payload || 'Batch upload failed';
+      })
+
       // Fetch File Details
       .addCase(fetchFileDetails.fulfilled, (state, action: PayloadAction<MediaFile>) => {
         state.selectedFile = action.payload;
-        const index = state.files.findIndex((f) => f._id === action.payload._id);
+        const targetId = action.payload.id || action.payload._id;
+        const index = state.files.findIndex((f) => (f.id || f._id) === targetId);
         if (index !== -1) {
           state.files[index] = action.payload;
         }
       })
 
-      // Delete File
+      // Delete File (Instant UI Removal)
       .addCase(deleteFileThunk.fulfilled, (state, action: PayloadAction<string>) => {
-        state.files = state.files.filter((f) => f._id !== action.payload);
-        if (state.selectedFile && state.selectedFile._id === action.payload) {
+        const deletedId = action.payload;
+        state.files = state.files.filter((f) => (f.id || f._id) !== deletedId);
+        if (state.selectedFile && (state.selectedFile.id || state.selectedFile._id) === deletedId) {
           state.selectedFile = null;
         }
       });
@@ -190,6 +279,8 @@ export const {
   addNotificationToHistory,
   markNotificationsRead,
   clearNotificationsHistory,
+  addLiveFile,
+  removeLiveFile,
   clearFileError,
 } = filesSlice.actions;
 

@@ -1,4 +1,5 @@
-import axiosClient from './axiosClient';
+import axios from 'axios';
+import { GRAPHQL_URL, API_BASE_URL } from '../config/env.config';
 
 export interface GraphQLResponse<T> {
   data?: T;
@@ -9,21 +10,61 @@ export const executeGraphQL = async <T>(
   query: string,
   variables?: Record<string, unknown>
 ): Promise<T> => {
-  const response = await axiosClient.post<GraphQLResponse<T>>('/graphql', {
-    query,
-    variables,
-  });
+  try {
+    const response = await axios.post<GraphQLResponse<T>>(
+      GRAPHQL_URL,
+      {
+        query,
+        variables,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        withCredentials: true,
+      }
+    );
 
-  if (response.data.errors && response.data.errors.length > 0) {
-    throw new Error(response.data.errors[0].message);
+    if (response.data.errors && response.data.errors.length > 0) {
+      const isUnauthenticated = response.data.errors.some(
+        (e) => e.extensions?.code === 'UNAUTHENTICATED' || e.message?.toLowerCase().includes('token')
+      );
+
+      if (isUnauthenticated) {
+        // Refresh HttpOnly token session automatically
+        await axios.post(
+          `${API_BASE_URL}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        );
+
+        // Retry GraphQL request with refreshed HttpOnly cookie
+        const retryRes = await axios.post<GraphQLResponse<T>>(
+          GRAPHQL_URL,
+          { query, variables },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            withCredentials: true,
+          }
+        );
+        if (retryRes.data.data) return retryRes.data.data;
+      }
+
+      throw new Error(response.data.errors[0].message);
+    }
+
+    if (!response.data.data) {
+      throw new Error('No data returned from GraphQL server');
+    }
+
+    return response.data.data;
+  } catch (err: unknown) {
+    throw err;
   }
-
-  if (!response.data.data) {
-    throw new Error('No data returned from GraphQL server');
-  }
-
-  return response.data.data;
 };
+
 
 // Example GraphQL Query Helpers
 export const graphqlQueries = {

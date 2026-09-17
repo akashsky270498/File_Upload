@@ -4,6 +4,6 @@ import './notification.swagger';
 
 const router = Router();
 
-router.get('/status', notificationController.getStatus);
+router.post('/status', notificationController.getStatus);
 
 export default router;

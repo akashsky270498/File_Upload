@@ -39,7 +39,7 @@ export const verifyOtpSchema = Joi.object({
 });
 
 export const refreshTokenSchema = Joi.object({
-  refreshToken: Joi.string().required(),
+  refreshToken: Joi.string().optional(),
 });
 
 export const forgotPasswordSchema = Joi.object({
