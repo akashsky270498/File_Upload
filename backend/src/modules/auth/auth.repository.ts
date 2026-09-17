@@ -42,7 +42,7 @@ export class AuthRepository {
     passwordHash: string;
     firstName: string;
     lastName: string;
-    mobileNumber?: string | null;
+    mobileNumber: string;
     status: UserStatus;
     role: UserRole;
   }): Promise<User> {

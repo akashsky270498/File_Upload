@@ -35,7 +35,7 @@ export class AuthService {
       passwordHash: hashedPassword,
       firstName: dto.firstName,
       lastName: dto.lastName,
-      mobileNumber: dto.mobileNumber || null,
+      mobileNumber: dto.mobileNumber,
       status: UserStatus.ACTIVE,
       role: UserRole.USER,
     });

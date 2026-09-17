@@ -13,6 +13,7 @@ import {
   setForgotPasswordStep,
 } from '../store/slices/authSlice';
 import { showToast } from '../store/slices/uiSlice';
+import { COUNTRY_CODES } from '../data/countryCodes';
 
 type AuthView = 'LOGIN' | 'REGISTER' | 'FORGOT_PASSWORD';
 type LoginMethod = 'PASSWORD' | 'OTP';
@@ -29,7 +30,8 @@ export const AuthPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [mobileNumber, setMobileNumber] = useState('');
+  const [countryCode, setCountryCode] = useState('+91');
+  const [phoneDigits, setPhoneDigits] = useState('');
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
@@ -69,13 +71,22 @@ export const AuthPage: React.FC = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     dispatch(clearError());
+
+    const cleanedDigits = phoneDigits.replace(/\D/g, '');
+    if (!cleanedDigits || cleanedDigits.length < 7) {
+      dispatch(showToast({ message: 'Please enter a valid mobile number.', type: 'error' }));
+      return;
+    }
+
+    const fullMobileNumber = `${countryCode}${cleanedDigits}`;
+
     const result = await dispatch(
       registerUser({
         email,
         password,
         firstName,
         lastName,
-        mobileNumber: mobileNumber || undefined,
+        mobileNumber: fullMobileNumber,
       })
     );
 
@@ -358,15 +369,39 @@ export const AuthPage: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label>Mobile Number (Optional)</label>
-                <div className="input-wrapper">
-                  <Phone size={18} className="input-icon" />
-                  <input
-                    type="text"
-                    placeholder="+14155552671"
-                    value={mobileNumber}
-                    onChange={(e) => setMobileNumber(e.target.value)}
-                  />
+                <label>Mobile Number *</label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <select
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
+                    style={{
+                      padding: '0.6rem 0.75rem',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-glass)',
+                      background: 'var(--bg-glass)',
+                      color: 'var(--text-main)',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      outline: 'none',
+                    }}
+                  >
+                    {COUNTRY_CODES.map((item) => (
+                      <option key={item.code} value={item.code} style={{ background: '#121826', color: '#ffffff' }}>
+                        {item.flag} {item.code} ({item.country})
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="input-wrapper" style={{ flex: 1 }}>
+                    <Phone size={18} className="input-icon" />
+                    <input
+                      type="tel"
+                      placeholder="9876543210"
+                      value={phoneDigits}
+                      onChange={(e) => setPhoneDigits(e.target.value)}
+                      required
+                    />
+                  </div>
                 </div>
               </div>
 

@@ -3,11 +3,14 @@ import { User, Mail, Lock, UserPlus, AlertCircle, ShieldCheck, Phone } from 'luc
 import { useAppDispatch, useAppSelector } from '../../store';
 import { registerUser, clearError } from '../../store/slices/authSlice';
 
+import { COUNTRY_CODES } from '../../data/countryCodes';
+
 interface RegisterFormProps {
   onSwitchToLogin: () => void;
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_REGEX = /^\d{7,14}$/;
 
 export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
   const dispatch = useAppDispatch();
@@ -16,7 +19,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [mobileNumber, setMobileNumber] = useState('');
+  const [countryCode, setCountryCode] = useState('+91');
+  const [phoneDigits, setPhoneDigits] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -24,6 +28,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
     firstName?: boolean;
     lastName?: boolean;
     email?: boolean;
+    phoneDigits?: boolean;
     password?: boolean;
     confirmPassword?: boolean;
   }>({});
@@ -32,12 +37,13 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
     firstName?: string;
     lastName?: string;
     email?: string;
+    phoneDigits?: string;
     password?: string;
     confirmPassword?: string;
   }>({});
 
   const validateField = (
-    field: 'firstName' | 'lastName' | 'email' | 'password' | 'confirmPassword',
+    field: 'firstName' | 'lastName' | 'email' | 'phoneDigits' | 'password' | 'confirmPassword',
     val: string
   ) => {
     const newErrors = { ...errors };
@@ -68,6 +74,17 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
       }
     }
 
+    if (field === 'phoneDigits') {
+      const cleaned = val.replace(/\D/g, '');
+      if (!cleaned) {
+        newErrors.phoneDigits = 'Mobile number is required.';
+      } else if (!PHONE_REGEX.test(cleaned)) {
+        newErrors.phoneDigits = 'Please enter a valid mobile number (7-14 digits).';
+      } else {
+        delete newErrors.phoneDigits;
+      }
+    }
+
     if (field === 'password') {
       if (!val) {
         newErrors.password = 'Password is required.';
@@ -95,16 +112,19 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    setTouched({ firstName: true, lastName: true, email: true, password: true, confirmPassword: true });
+    setTouched({ firstName: true, lastName: true, email: true, phoneDigits: true, password: true, confirmPassword: true });
     const errFirst = validateField('firstName', firstName);
     const errLast = validateField('lastName', lastName);
     const errEmail = validateField('email', email);
+    const errPhone = validateField('phoneDigits', phoneDigits);
     const errPass = validateField('password', password);
     const errConfirm = validateField('confirmPassword', confirmPassword);
 
-    if (errFirst.firstName || errLast.lastName || errEmail.email || errPass.password || errConfirm.confirmPassword) {
+    if (errFirst.firstName || errLast.lastName || errEmail.email || errPhone.phoneDigits || errPass.password || errConfirm.confirmPassword) {
       return;
     }
+
+    const fullMobileNumber = `${countryCode}${phoneDigits.replace(/\D/g, '')}`;
 
     dispatch(
       registerUser({
@@ -112,7 +132,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
         lastName: lastName.trim(),
         email: email.trim(),
         password,
-        mobileNumber: mobileNumber.trim() || undefined,
+        mobileNumber: fullMobileNumber,
       })
     );
   };
@@ -135,7 +155,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
       <form onSubmit={handleSubmit} className="auth-form" noValidate>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
           <div className="form-group">
-            <label>First Name</label>
+            <label>First Name *</label>
             <div className="input-wrapper">
               <User size={18} className="input-icon" />
               <input
@@ -150,7 +170,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
           </div>
 
           <div className="form-group">
-            <label>Last Name</label>
+            <label>Last Name *</label>
             <div className="input-wrapper">
               <User size={18} className="input-icon" />
               <input
@@ -167,7 +187,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
 
         {/* Email Address */}
         <div className="form-group">
-          <label>Email Address</label>
+          <label>Email Address *</label>
           <div className="input-wrapper">
             <Mail size={18} className="input-icon" />
             <input
@@ -181,23 +201,54 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
           </div>
         </div>
 
-        {/* Mobile Number */}
+        {/* Mandatory Mobile Number with Country Code Dropdown (Default India +91) */}
         <div className="form-group">
-          <label>Mobile Number (Optional)</label>
-          <div className="input-wrapper">
-            <Phone size={18} className="input-icon" />
-            <input
-              type="text"
-              placeholder="+14155552671"
-              value={mobileNumber}
-              onChange={(e) => setMobileNumber(e.target.value)}
-            />
+          <label>Mobile Number *</label>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <select
+              value={countryCode}
+              onChange={(e) => setCountryCode(e.target.value)}
+              style={{
+                padding: '0.6rem 0.75rem',
+                borderRadius: '8px',
+                border: '1px solid var(--border-glass)',
+                background: 'var(--bg-glass)',
+                color: 'var(--text-main)',
+                fontWeight: 600,
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+            >
+              {COUNTRY_CODES.map((item) => (
+                <option key={item.code} value={item.code} style={{ background: '#121826', color: '#ffffff' }}>
+                  {item.flag} {item.code} ({item.country})
+                </option>
+              ))}
+            </select>
+
+            <div className="input-wrapper" style={{ flex: 1 }}>
+              <Phone size={18} className="input-icon" />
+              <input
+                type="tel"
+                placeholder="9876543210"
+                value={phoneDigits}
+                onChange={(e) => setPhoneDigits(e.target.value)}
+                onBlur={() => validateField('phoneDigits', phoneDigits)}
+                className={touched.phoneDigits && errors.phoneDigits ? 'input-error' : ''}
+              />
+            </div>
           </div>
+          {touched.phoneDigits && errors.phoneDigits && (
+            <div className="field-error" style={{ marginTop: '0.25rem' }}>
+              <AlertCircle size={14} />
+              <span>{errors.phoneDigits}</span>
+            </div>
+          )}
         </div>
 
         {/* Password */}
         <div className="form-group">
-          <label>Password</label>
+          <label>Password *</label>
           <div className="input-wrapper">
             <Lock size={18} className="input-icon" />
             <input
@@ -213,7 +264,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) =
 
         {/* Confirm Password */}
         <div className="form-group">
-          <label>Confirm Password</label>
+          <label>Confirm Password *</label>
           <div className="input-wrapper">
             <ShieldCheck size={18} className="input-icon" />
             <input

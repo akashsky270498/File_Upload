@@ -18,8 +18,9 @@ export const registerSchema = Joi.object({
   password: passwordSchema,
   firstName: Joi.string().max(100).required(),
   lastName: Joi.string().max(100).required(),
-  mobileNumber: Joi.string().pattern(/^\+[1-9]\d{1,14}$/).optional().messages({
-    'string.pattern.base': 'Mobile number must include valid country code format (e.g. +1234567890)',
+  mobileNumber: Joi.string().pattern(/^\+[1-9]\d{1,14}$/).required().messages({
+    'any.required': 'Mobile number is required',
+    'string.pattern.base': 'Mobile number must include valid country code format (e.g. +919876543210)',
   }),
 });
 

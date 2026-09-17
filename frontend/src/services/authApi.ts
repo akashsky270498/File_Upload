@@ -12,7 +12,7 @@ export interface RegisterPayload {
   password: string;
   firstName: string;
   lastName: string;
-  mobileNumber?: string;
+  mobileNumber: string;
 }
 
 export interface VerifyOtpPayload {

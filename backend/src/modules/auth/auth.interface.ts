@@ -5,7 +5,7 @@ export interface RegisterDTO {
   password: string;
   firstName: string;
   lastName: string;
-  mobileNumber?: string;
+  mobileNumber: string;
 }
 
 export interface LoginDTO {
