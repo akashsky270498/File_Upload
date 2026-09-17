@@ -1,4 +1,4 @@
-import { Table, Column, Model, DataType, ForeignKey } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from 'sequelize-typescript';
 import { File } from './file.model';
 import { Tag } from './tag.model';
 
@@ -8,7 +8,13 @@ export class FileTag extends Model {
   @Column({ type: DataType.UUID, primaryKey: true })
   fileId!: string;
 
+  @BelongsTo(() => File)
+  file!: File;
+
   @ForeignKey(() => Tag)
   @Column({ type: DataType.UUID, primaryKey: true })
   tagId!: string;
+
+  @BelongsTo(() => Tag)
+  tag!: Tag;
 }

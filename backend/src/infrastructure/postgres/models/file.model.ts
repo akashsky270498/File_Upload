@@ -32,7 +32,7 @@ export enum FileType {
 })
 export class File extends Model {
   @Column({ type: DataType.UUID, defaultValue: DataType.UUIDV4, primaryKey: true })
-  id!: string;
+  declare id: string;
 
   @ForeignKey(() => User)
   @AllowNull(false)

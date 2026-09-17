@@ -13,7 +13,7 @@ import { User } from './user.model';
 })
 export class AuditLog extends Model {
   @Column({ type: DataType.UUID, defaultValue: DataType.UUIDV4, primaryKey: true })
-  id!: string;
+  declare id: string;
 
   @ForeignKey(() => User)
   @AllowNull(true)

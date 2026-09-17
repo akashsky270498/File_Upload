@@ -1,14 +1,21 @@
 import Joi from 'joi';
 
+export const passwordSchema = Joi.string()
+  .min(8)
+  .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&^#()_+\-=\[\]{};':"\\|,.<>\/?])/)
+  .required()
+  .messages({
+    'string.min': 'Password must be at least 8 characters long',
+    'string.pattern.base': 'Password must contain at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character',
+    'any.required': 'Password is required',
+  });
+
 export const registerSchema = Joi.object({
   email: Joi.string().email().required().messages({
     'string.email': 'Please provide a valid email address',
     'any.required': 'Email is required',
   }),
-  password: Joi.string().min(8).required().messages({
-    'string.min': 'Password must be at least 8 characters long',
-    'any.required': 'Password is required',
-  }),
+  password: passwordSchema,
   firstName: Joi.string().max(100).required(),
   lastName: Joi.string().max(100).required(),
   mobileNumber: Joi.string().pattern(/^\+[1-9]\d{1,14}$/).optional().messages({

@@ -5,7 +5,7 @@ import { FileTag } from './file-tag.model';
 @Table({ tableName: 'tags', timestamps: true, underscored: true })
 export class Tag extends Model {
   @Column({ type: DataType.UUID, defaultValue: DataType.UUIDV4, primaryKey: true })
-  id!: string;
+  declare id: string;
 
   @Unique
   @AllowNull(false)

@@ -1,4 +1,4 @@
-import amqp, { Connection, Channel } from 'amqplib';
+import amqp, { ChannelModel, Channel } from 'amqplib';
 import { env } from './env';
 import { logger } from '../common/logger';
 
@@ -21,10 +21,10 @@ export const ROUTING_KEYS = {
   DLQ: 'dlq.key',
 } as const;
 
-let connection: Connection | null = null;
+let connection: ChannelModel | null = null;
 let channel: Channel | null = null;
 
-export const connectRabbitMQ = async (): Promise<{ connection: Connection; channel: Channel }> => {
+export const connectRabbitMQ = async (): Promise<{ connection: ChannelModel; channel: Channel }> => {
   try {
     connection = await amqp.connect(env.rabbitmq.url);
     channel = await connection.createChannel();
@@ -60,6 +60,10 @@ export const connectRabbitMQ = async (): Promise<{ connection: Connection; chann
     // Set Prefetch Limit (Fair Dispatch - 1 job per worker at a time)
     await channel.prefetch(1);
 
+    if (!connection || !channel) {
+      throw new Error('Failed to create RabbitMQ connection or channel');
+    }
+
     return { connection, channel };
   } catch (error) {
     logger.error({ error }, 'Failed to connect to RabbitMQ broker.');
@@ -91,3 +95,4 @@ export const closeRabbitMQ = async (): Promise<void> => {
     logger.error({ err }, 'Error during RabbitMQ disconnection.');
   }
 };
+

@@ -83,7 +83,7 @@ export class VideoStrategy extends BaseUploadStrategy {
 }
 
 export class UploadStrategyFactory {
-  private static readonly strategies: Map<FileType, IUploadStrategy> = new Map([
+  private static readonly strategies: Map<FileType, IUploadStrategy> = new Map<FileType, IUploadStrategy>([
     [FileType.PROFILE_IMAGE, new ProfileImageStrategy()],
     [FileType.COVER_IMAGE, new CoverImageStrategy()],
     [FileType.POST_MEDIA, new PostMediaStrategy()],

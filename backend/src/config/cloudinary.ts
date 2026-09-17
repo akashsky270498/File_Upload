@@ -53,7 +53,7 @@ export class CloudinaryService {
   /**
    * Delete asset from Cloudinary (Compensating Transaction)
    */
-  public async deleteAsset(publicId: string, resourceType: 'image' | 'video' | 'raw' = 'image'): Promise<void> {
+  public async deleteAsset(publicId: string, resourceType: 'auto' | 'image' | 'video' | 'raw' = 'image'): Promise<void> {
     try {
       await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
     } catch (err) {

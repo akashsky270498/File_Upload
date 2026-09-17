@@ -25,7 +25,7 @@ export enum UserStatus {
 })
 export class User extends Model {
   @Column({ type: DataType.UUID, defaultValue: DataType.UUIDV4, primaryKey: true })
-  id!: string;
+  declare id: string;
 
   @Unique
   @AllowNull(false)
