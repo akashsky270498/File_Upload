@@ -76,8 +76,16 @@ export const getRabbitChannel = (): Channel => {
 
 export const closeRabbitMQ = async (): Promise<void> => {
   try {
-    if (channel) await channel.close();
-    if (connection) await connection.close();
+    if (channel) {
+      const ch = channel;
+      channel = null;
+      await ch.close().catch(() => {});
+    }
+    if (connection) {
+      const conn = connection;
+      connection = null;
+      await conn.close().catch(() => {});
+    }
     logger.info('RabbitMQ connection closed cleanly.');
   } catch (err) {
     logger.error({ err }, 'Error during RabbitMQ disconnection.');

@@ -12,10 +12,14 @@ import { startAllWorkers } from './workers';
 import { startAllKafkaConsumers } from './consumers';
 
 import http from 'http';
+import { initTracing } from './config/tracing';
 import { socketGateway } from './modules/notifications/socket.gateway';
 
 const startServer = async (): Promise<void> => {
   try {
+    // 0. Initialize OpenTelemetry Distributed Tracing
+    await initTracing();
+
     // 1. Connect to PostgreSQL Database
     await connectPostgres();
 
