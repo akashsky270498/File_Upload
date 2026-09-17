@@ -20,26 +20,26 @@ const startServer = async (): Promise<void> => {
     // 0. Initialize OpenTelemetry Distributed Tracing (non-blocking)
     initTracing().catch(() => {});
 
-    // 1-5. Parallelize Infrastructure Handshakes for Instant (<3s) Bootstrapping
-    logger.info('Bootstrapping backend infrastructure services in parallel...');
-    await Promise.all([
-      connectPostgres(),
-      connectRedis(),
+    // 1. Connect to Core Primary Stores (PostgreSQL & Redis)
+    await Promise.all([connectPostgres(), connectRedis()]);
+
+    // 2. Instantiate Express Application, HTTP Server & Socket.IO Gateway
+    const app = await createApp();
+    const server = http.createServer(app);
+    socketGateway.init(server);
+
+    // 3. Start HTTP Server Listener INSTANTLY (<1s)
+    server.listen(env.port, () => {
+      logger.info(`Server running in [${env.nodeEnv}] mode on http://localhost:${env.port}`);
+    });
+
+    // 4. Initialize Background Subsystems (RabbitMQ, Kafka, Elasticsearch) Non-Blocking
+    Promise.all([
       connectRabbitMQ().then(() => startAllWorkers()),
       connectKafka().then(() => startAllKafkaConsumers()),
       connectElasticsearch().then(() => esIndexManager.initFilesIndex()),
-    ]);
-
-    // 6. Instantiate Express Application & HTTP Server
-    const app = await createApp();
-    const server = http.createServer(app);
-
-    // 7. Initialize Socket.IO Gateway with Redis Adapter
-    socketGateway.init(server);
-
-    // 8. Start HTTP Server Listener
-    server.listen(env.port, () => {
-      logger.info(`Server running in [${env.nodeEnv}] mode on http://localhost:${env.port}`);
+    ]).catch((err) => {
+      logger.error({ err }, 'Background subsystem initialization warning.');
     });
 
     // Graceful Shutdown handling
