@@ -1,3 +1,4 @@
+import { ConsumeMessage } from 'amqplib';
 import { getRabbitChannel, QUEUES } from '../../config/rabbitmq';
 import { RabbitJobMessage } from '../../infrastructure/rabbitmq/rabbitmq.producer';
 import { logger } from '../../common/logger';
@@ -8,7 +9,7 @@ export const startEmailWorker = async (): Promise<void> => {
 
   logger.info(`Starting Email Worker listening on queue: ${QUEUES.EMAIL}`);
 
-  await channel.consume(QUEUES.EMAIL, async (msg) => {
+  await channel.consume(QUEUES.EMAIL, async (msg: ConsumeMessage | null) => {
     if (!msg) return;
 
     try {
@@ -140,6 +141,65 @@ export const startEmailWorker = async (): Promise<void> => {
           </html>
         `;
         logger.info({ email: job.payload.email, otp: job.payload.otp, subject, from: env.smtp.from }, '🔑 [Email Worker] Dispatched Professional OTP Email');
+      } else if (job.jobName === 'send-password-reset-otp') {
+        subject = 'Password Reset OTP Request - OmniMedia Platform';
+        htmlContent = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Password Reset OTP</title>
+          </head>
+          <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 40px 10px;">
+              <tr>
+                <td align="center">
+                  <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                    <!-- Header -->
+                    <tr>
+                      <td style="background-color: #0f172a; padding: 32px 40px; text-align: center;">
+                        <span style="font-size: 24px; font-weight: 800; color: #ef4444; letter-spacing: -0.5px;">OmniMedia</span>
+                        <span style="font-size: 14px; font-weight: 600; color: #94a3b8; margin-left: 6px;">ACCOUNT SECURITY</span>
+                      </td>
+                    </tr>
+                    <!-- Content -->
+                    <tr>
+                      <td style="padding: 40px; text-align: center; color: #334155;">
+                        <h1 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 700; color: #0f172a;">Password Reset Requested</h1>
+                        <p style="margin: 0 0 24px 0; font-size: 15px; color: #475569;">
+                          Hello <b>${job.payload.firstName || 'Valued User'}</b>, we received a request to reset your password for account <b>${job.payload.email}</b>.
+                        </p>
+                        
+                        <!-- OTP Display Box -->
+                        <div style="background-color: #fef2f2; border: 2px dashed #f87171; border-radius: 12px; padding: 24px; margin: 24px 0; display: inline-block;">
+                          <span style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #dc2626;">
+                            ${job.payload.otp}
+                          </span>
+                        </div>
+
+                        <p style="margin: 16px 0 0 0; font-size: 13px; font-weight: 600; color: #dc2626;">
+                          ⏳ This password reset code expires in 10 minutes.
+                        </p>
+                        <p style="margin: 8px 0 0 0; font-size: 13px; color: #94a3b8;">
+                          If you did not request a password reset, please ignore this email. Your current password remains secure.
+                        </p>
+                      </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                      <td style="background-color: #f8fafc; padding: 24px 40px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 13px; color: #94a3b8;">
+                        <p style="margin: 0;">&copy; ${new Date().getFullYear()} OmniMedia Security Team. Never share your reset OTP with anyone.</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+          </html>
+        `;
+        logger.info({ email: job.payload.email, otp: job.payload.otp, subject, from: env.smtp.from }, '🔒 [Email Worker] Dispatched Password Reset OTP Email');
       }
 
       // Send Acknowledgement to RabbitMQ Broker

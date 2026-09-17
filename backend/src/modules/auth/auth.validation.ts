@@ -40,3 +40,29 @@ export const verifyOtpSchema = Joi.object({
 export const refreshTokenSchema = Joi.object({
   refreshToken: Joi.string().required(),
 });
+
+export const forgotPasswordSchema = Joi.object({
+  email: Joi.string().email().required().messages({
+    'string.email': 'Please provide a valid email address',
+    'any.required': 'Email is required',
+  }),
+});
+
+export const resetPasswordSchema = Joi.object({
+  email: Joi.string().email().required().messages({
+    'string.email': 'Please provide a valid email address',
+    'any.required': 'Email is required',
+  }),
+  otp: Joi.string().length(6).required().messages({
+    'string.length': 'OTP code must be 6 digits',
+    'any.required': 'OTP is required',
+  }),
+  newPassword: passwordSchema,
+});
+
+export const changePasswordSchema = Joi.object({
+  currentPassword: Joi.string().required().messages({
+    'any.required': 'Current password is required',
+  }),
+  newPassword: passwordSchema,
+});

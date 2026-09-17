@@ -58,6 +58,14 @@ export class AuthRepository {
   }
 
   /**
+   * Update password hash for a user
+   */
+  public async updateUserPassword(user: User, passwordHash: string): Promise<void> {
+    user.passwordHash = passwordHash;
+    await user.save();
+  }
+
+  /**
    * Create a Refresh Token record
    */
   public async createRefreshToken(tokenData: {
@@ -139,6 +147,34 @@ export class AuthRepository {
    */
   public async deleteOtp(otpRecord: OtpVerification): Promise<void> {
     await otpRecord.destroy();
+  }
+
+  /**
+   * Revoke all active refresh tokens for a user (on password reset)
+   */
+  public async revokeAllUserRefreshTokens(userId: string): Promise<number> {
+    const [affectedCount] = await RefreshToken.update(
+      { revokedAt: new Date() },
+      { where: { userId, revokedAt: null } }
+    );
+    return affectedCount;
+  }
+
+  /**
+   * Save OTP record by clearing old active OTPs for the identifier/type and creating new
+   */
+  public async saveOtp(otpData: {
+    userId?: string;
+    identifier: string;
+    otpHash: string;
+    type: OtpType;
+    expiresAt: Date;
+  }): Promise<OtpVerification> {
+    await this.deleteOtpByIdentifier(otpData.identifier, otpData.type);
+    return this.createOtpVerification({
+      ...otpData,
+      attempts: 0,
+    });
   }
 }
 

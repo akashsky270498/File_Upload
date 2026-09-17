@@ -40,4 +40,43 @@ describe('Auth API Integration Tests', () => {
     expect(response.body).toHaveProperty('success', false);
     expect(response.body).toHaveProperty('errorCode', 'VALIDATION_ERROR');
   });
+
+  it('POST /api/v1/auth/forgot-password should return HTTP 400 Bad Request when email is invalid', async () => {
+    const response = await request(app)
+      .post('/api/v1/auth/forgot-password')
+      .send({
+        email: 'not-an-email',
+      });
+
+    expect(response.status).toEqual(400);
+    expect(response.body).toHaveProperty('success', false);
+    expect(response.body).toHaveProperty('errorCode', 'VALIDATION_ERROR');
+  });
+
+  it('POST /api/v1/auth/reset-password should return HTTP 400 Bad Request when missing OTP or weak password', async () => {
+    const response = await request(app)
+      .post('/api/v1/auth/reset-password')
+      .send({
+        email: 'user@example.com',
+        otp: '123', // should be 6 digits
+        newPassword: 'weak',
+      });
+
+    expect(response.status).toEqual(400);
+    expect(response.body).toHaveProperty('success', false);
+    expect(response.body).toHaveProperty('errorCode', 'VALIDATION_ERROR');
+  });
+
+  it('POST /api/v1/auth/change-password should return HTTP 401 Unauthorized when missing Authorization header', async () => {
+    const response = await request(app)
+      .post('/api/v1/auth/change-password')
+      .send({
+        currentPassword: 'OldPassword123!',
+        newPassword: 'NewPassword123!',
+      });
+
+    expect(response.status).toEqual(401);
+    expect(response.body).toHaveProperty('success', false);
+    expect(response.body).toHaveProperty('errorCode', 'UNAUTHORIZED');
+  });
 });

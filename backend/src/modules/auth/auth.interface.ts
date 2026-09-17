@@ -44,3 +44,18 @@ export interface TokenPairResponse {
   accessToken: string;
   refreshToken: string;
 }
+
+export interface ForgotPasswordDTO {
+  email: string;
+}
+
+export interface ResetPasswordDTO {
+  email: string;
+  otp: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordDTO {
+  currentPassword: string;
+  newPassword: string;
+}

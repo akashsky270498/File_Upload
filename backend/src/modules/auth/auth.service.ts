@@ -6,7 +6,13 @@ import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '.
 import { ConflictError, NotFoundError, UnauthorizedError, ValidationError } from '../../common/errors/app-error';
 import { logger } from '../../common/logger';
 import { authRepository, AuthRepository } from './auth.repository';
-import { RegisterDTO, AuthTokensResponse } from './auth.interface';
+import {
+  RegisterDTO,
+  AuthTokensResponse,
+  ForgotPasswordDTO,
+  ResetPasswordDTO,
+  ChangePasswordDTO,
+} from './auth.interface';
 import { rabbitMQProducer } from '../../infrastructure/rabbitmq/rabbitmq.producer';
 import { kafkaProducerService } from '../../infrastructure/kafka/kafka.producer';
 
@@ -268,6 +274,143 @@ export class AuthService {
 
     return { message: 'Logout successful' };
   }
+
+  /**
+   * Request Password Reset OTP (Forgot Password)
+   */
+  public async forgotPassword(dto: ForgotPasswordDTO): Promise<{ message: string }> {
+    const user = await this.repository.findByEmail(dto.email);
+
+    // Generic response to prevent email enumeration attack
+    if (!user) {
+      logger.warn({ email: dto.email }, 'Forgot password requested for non-existing email');
+      return {
+        message: 'If an account with this email exists, a password reset OTP has been sent.',
+      };
+    }
+
+    const rawOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpHash = crypto.createHash('sha256').update(rawOtp).digest('hex');
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    await this.repository.saveOtp({
+      userId: user.id,
+      identifier: user.email.toLowerCase(),
+      otpHash,
+      type: OtpType.PASSWORD_RESET,
+      expiresAt,
+    });
+
+    logger.info({ email: user.email, rawOtp }, 'Password reset OTP generated. Queuing email delivery...');
+
+    // Publish background job to RabbitMQ email.queue
+    await rabbitMQProducer.publishEmailJob('send-password-reset-otp', {
+      email: user.email,
+      otp: rawOtp,
+      firstName: user.firstName,
+    });
+
+    return {
+      message: 'If an account with this email exists, a password reset OTP has been sent.',
+    };
+  }
+
+  /**
+   * Reset Password using OTP
+   */
+  public async resetPassword(dto: ResetPasswordDTO): Promise<{ message: string }> {
+    const otpRecord = await this.repository.findOtp(dto.email, OtpType.PASSWORD_RESET);
+
+    if (!otpRecord) {
+      throw new ValidationError('No active password reset request found or OTP is invalid');
+    }
+
+    if (new Date() > otpRecord.expiresAt) {
+      await this.repository.deleteOtp(otpRecord);
+      throw new ValidationError('Password reset OTP has expired. Please request a new OTP');
+    }
+
+    if (otpRecord.attempts >= 3) {
+      await this.repository.deleteOtp(otpRecord);
+      throw new ValidationError('Maximum OTP verification attempts exceeded. Please request a new OTP');
+    }
+
+    const inputOtpHash = crypto.createHash('sha256').update(dto.otp).digest('hex');
+
+    if (inputOtpHash !== otpRecord.otpHash) {
+      await this.repository.incrementOtpAttempts(otpRecord);
+      throw new ValidationError(`Invalid OTP code. Attempts remaining: ${3 - (otpRecord.attempts + 1)}`);
+    }
+
+    const user = await this.repository.findByEmail(dto.email);
+    if (!user) {
+      throw new NotFoundError('User associated with OTP not found');
+    }
+
+    // Hash new password & update
+    const newPasswordHash = await hashPassword(dto.newPassword);
+    await this.repository.updateUserPassword(user, newPasswordHash);
+
+    // Security requirement: Revoke all active refresh tokens for this user
+    await this.repository.revokeAllUserRefreshTokens(user.id);
+
+    // Delete OTP record after successful use
+    await this.repository.deleteOtp(otpRecord);
+
+    logger.info({ userId: user.id, email: user.email }, 'User password successfully reset. Revoked all sessions.');
+
+    // Audit event
+    await kafkaProducerService.publishAuditEvent('PASSWORD_RESET', user.id, {
+      resource: 'user',
+      resourceId: user.id,
+    });
+
+    return {
+      message: 'Password reset successful. You can now log in with your new password.',
+    };
+  }
+
+  /**
+   * Change Password (Authenticated User)
+   */
+  public async changePassword(userId: string, dto: ChangePasswordDTO): Promise<{ message: string }> {
+    const user = await this.repository.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User account not found');
+    }
+
+    if (user.status === UserStatus.BLOCKED) {
+      throw new UnauthorizedError('Your account has been suspended');
+    }
+
+    const isCurrentPasswordValid = await comparePassword(dto.currentPassword, user.passwordHash);
+    if (!isCurrentPasswordValid) {
+      throw new UnauthorizedError('Current password is incorrect');
+    }
+
+    if (dto.currentPassword === dto.newPassword) {
+      throw new ValidationError('New password must be different from current password');
+    }
+
+    const newPasswordHash = await hashPassword(dto.newPassword);
+    await this.repository.updateUserPassword(user, newPasswordHash);
+
+    // Revoke all active refresh tokens for security
+    await this.repository.revokeAllUserRefreshTokens(user.id);
+
+    logger.info({ userId: user.id, email: user.email }, 'User successfully changed password.');
+
+    // Audit event
+    await kafkaProducerService.publishAuditEvent('PASSWORD_CHANGED', user.id, {
+      resource: 'user',
+      resourceId: user.id,
+    });
+
+    return {
+      message: 'Password changed successfully. Please log in again with your new password.',
+    };
+  }
 }
 
 export const authService = new AuthService();
+

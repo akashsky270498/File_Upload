@@ -65,6 +65,42 @@
  *         refreshToken:
  *           type: string
  *           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *     ForgotPasswordInput:
+ *       type: object
+ *       required:
+ *         - email
+ *       properties:
+ *         email:
+ *           type: string
+ *           example: alex@example.com
+ *     ResetPasswordInput:
+ *       type: object
+ *       required:
+ *         - email
+ *         - otp
+ *         - newPassword
+ *       properties:
+ *         email:
+ *           type: string
+ *           example: alex@example.com
+ *         otp:
+ *           type: string
+ *           example: "123456"
+ *         newPassword:
+ *           type: string
+ *           example: NewSecurePass123!
+ *     ChangePasswordInput:
+ *       type: object
+ *       required:
+ *         - currentPassword
+ *         - newPassword
+ *       properties:
+ *         currentPassword:
+ *           type: string
+ *           example: CurrentPass123!
+ *         newPassword:
+ *           type: string
+ *           example: BrandNewPass123!
  */
 
 /**
@@ -170,4 +206,57 @@
  *     responses:
  *       200:
  *         description: Refresh token revoked successfully
- */
+ * 
+ * /api/v1/auth/forgot-password:
+ *   post:
+ *     summary: Request Password Reset OTP via Email
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ForgotPasswordInput'
+ *     responses:
+ *       200:
+ *         description: Password reset OTP sent to email if account exists
+ * 
+ * /api/v1/auth/reset-password:
+ *   post:
+ *     summary: Reset Password using OTP code
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ResetPasswordInput'
+ *     responses:
+ *       200:
+ *         description: Password reset successfully and all active sessions revoked
+ *       400:
+ *         description: Invalid/Expired OTP or weak new password
+ * 
+ * /api/v1/auth/change-password:
+ *   post:
+ *     summary: Change Password for Authenticated User
+ *     tags:
+ *       - Authentication
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ChangePasswordInput'
+ *     responses:
+ *       200:
+ *         description: Password changed successfully and all active sessions revoked
+ *       401:
+ *         description: Unauthorized - missing token or incorrect current password
+ *       400:
+ *         description: Validation error or new password matches current password
+ * */

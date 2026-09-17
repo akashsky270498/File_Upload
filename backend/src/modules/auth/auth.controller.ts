@@ -1,6 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService, AuthService } from './auth.service';
-import { RegisterDTO, LoginDTO, RequestOtpDTO, VerifyOtpDTO, RefreshTokenDTO } from './auth.interface';
+import { AuthenticatedRequest } from '../../common/middleware/auth';
+import {
+  RegisterDTO,
+  LoginDTO,
+  RequestOtpDTO,
+  VerifyOtpDTO,
+  RefreshTokenDTO,
+  ForgotPasswordDTO,
+  ResetPasswordDTO,
+  ChangePasswordDTO,
+} from './auth.interface';
 
 export class AuthController {
   constructor(private readonly service: AuthService = authService) {}
@@ -74,6 +84,46 @@ export class AuthController {
     try {
       const dto: RefreshTokenDTO = req.body;
       const result = await this.service.logout(dto.refreshToken);
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public forgotPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const dto: ForgotPasswordDTO = req.body;
+      const result = await this.service.forgotPassword(dto);
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public resetPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const dto: ResetPasswordDTO = req.body;
+      const result = await this.service.resetPassword(dto);
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public changePassword = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.user!.userId;
+      const dto: ChangePasswordDTO = req.body;
+      const result = await this.service.changePassword(userId, dto);
       res.status(200).json({
         success: true,
         data: result,

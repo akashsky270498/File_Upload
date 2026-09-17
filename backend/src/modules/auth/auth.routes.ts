@@ -1,12 +1,16 @@
 import { Router } from 'express';
 import { authController } from './auth.controller';
 import { validateRequest } from '../../common/middleware/validate.middleware';
+import { authenticateJwt } from '../../common/middleware/auth';
 import {
   registerSchema,
   loginSchema,
   requestOtpSchema,
   verifyOtpSchema,
   refreshTokenSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  changePasswordSchema,
 } from './auth.validation';
 import './auth.swagger';
 
@@ -47,6 +51,25 @@ router.post(
   '/logout',
   validateRequest(refreshTokenSchema),
   authController.logout
+);
+
+router.post(
+  '/forgot-password',
+  validateRequest(forgotPasswordSchema),
+  authController.forgotPassword
+);
+
+router.post(
+  '/reset-password',
+  validateRequest(resetPasswordSchema),
+  authController.resetPassword
+);
+
+router.post(
+  '/change-password',
+  authenticateJwt,
+  validateRequest(changePasswordSchema),
+  authController.changePassword
 );
 
 export default router;
