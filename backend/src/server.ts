@@ -11,6 +11,9 @@ import { esIndexManager } from './infrastructure/elasticsearch/index.manager';
 import { startAllWorkers } from './workers';
 import { startAllKafkaConsumers } from './consumers';
 
+import http from 'http';
+import { socketGateway } from './modules/notifications/socket.gateway';
+
 const startServer = async (): Promise<void> => {
   try {
     // 1. Connect to PostgreSQL Database
@@ -31,11 +34,15 @@ const startServer = async (): Promise<void> => {
     await connectElasticsearch();
     await esIndexManager.initFilesIndex();
 
-    // 6. Instantiate Express Application
+    // 6. Instantiate Express Application & HTTP Server
     const app = await createApp();
+    const server = http.createServer(app);
 
-    // 6. Start HTTP Server Listener
-    const server = app.listen(env.port, () => {
+    // 7. Initialize Socket.IO Gateway with Redis Adapter
+    socketGateway.init(server);
+
+    // 8. Start HTTP Server Listener
+    server.listen(env.port, () => {
       logger.info(`Server running in [${env.nodeEnv}] mode on http://localhost:${env.port}`);
     });
 

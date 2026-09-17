@@ -1,5 +1,6 @@
 import { getRabbitChannel, QUEUES } from '../../config/rabbitmq';
 import { RabbitJobMessage } from '../../infrastructure/rabbitmq/rabbitmq.producer';
+import { notificationService } from '../../modules/notifications/notification.service';
 import { logger } from '../../common/logger';
 
 export const startMediaWorker = async (): Promise<void> => {
@@ -16,8 +17,14 @@ export const startMediaWorker = async (): Promise<void> => {
 
       if (job.jobName === 'generate-thumbnail') {
         logger.info({ fileId: job.payload.fileId }, '🎬 [Media Worker] Generated video thumbnail frame.');
+        if (job.payload.userId) {
+          await notificationService.notifyMediaProcessed(job.payload.userId, job.payload.fileId, 'Video Media Asset');
+        }
       } else if (job.jobName === 'process-media') {
         logger.info({ fileId: job.payload.fileId }, '🎞️ [Media Worker] Extracted media dimensions & metadata.');
+        if (job.payload.userId) {
+          await notificationService.notifyMediaProcessed(job.payload.userId, job.payload.fileId, 'Media Asset');
+        }
       }
 
       channel.ack(msg);
