@@ -4,6 +4,8 @@ import { env } from './config/env';
 import { logger } from './common/logger';
 import { connectPostgres, sequelize } from './infrastructure/postgres';
 import { connectRedis, redisClient } from './config/redis';
+import { connectRabbitMQ, closeRabbitMQ } from './config/rabbitmq';
+import { startAllWorkers } from './workers';
 
 const startServer = async (): Promise<void> => {
   try {
@@ -13,10 +15,14 @@ const startServer = async (): Promise<void> => {
     // 2. Connect to Redis Instance
     await connectRedis();
 
-    // 3. Instantiate Express Application
+    // 3. Connect to RabbitMQ Broker & Start Workers
+    await connectRabbitMQ();
+    await startAllWorkers();
+
+    // 4. Instantiate Express Application
     const app = createApp();
 
-    // 4. Start HTTP Server Listener
+    // 5. Start HTTP Server Listener
     const server = app.listen(env.port, () => {
       logger.info(`Server running in [${env.nodeEnv}] mode on http://localhost:${env.port}`);
     });
@@ -32,6 +38,9 @@ const startServer = async (): Promise<void> => {
 
           redisClient.disconnect();
           logger.info('Redis connection client closed.');
+
+          await closeRabbitMQ();
+          logger.info('RabbitMQ connection closed.');
 
           process.exit(0);
         } catch (err) {

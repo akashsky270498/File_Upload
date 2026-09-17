@@ -5,6 +5,7 @@ import { cloudinaryService, CloudinaryService, CloudinaryUploadResult } from '..
 import { UploadInputDTO, UploadResponseDTO } from './upload.interface';
 import { ValidationError, AppError } from '../../common/errors/app-error';
 import { logger } from '../../common/logger';
+import { rabbitMQProducer } from '../../infrastructure/rabbitmq/rabbitmq.producer';
 
 export class UploadService {
   constructor(
@@ -13,7 +14,7 @@ export class UploadService {
   ) {}
 
   /**
-   * Process unified media upload with strategy validation and Cloudinary compensating transaction
+   * Process unified media upload with strategy validation, background jobs, and Cloudinary compensating transactions
    */
   public async uploadMedia(
     userId: string,
@@ -63,6 +64,15 @@ export class UploadService {
         'File record and tags saved successfully in PostgreSQL.'
       );
 
+      // 4. Publish background media processing job to RabbitMQ media.queue if video/audio
+      if (dto.uploadType === FileType.VIDEO || dto.uploadType === FileType.AUDIO) {
+        await rabbitMQProducer.publishMediaJob('generate-thumbnail', {
+          fileId: fileRecord.id,
+          cloudinaryPublicId: fileRecord.cloudinaryPublicId,
+          fileType: dto.uploadType,
+        });
+      }
+
       return {
         id: fileRecord.id,
         userId: fileRecord.userId,
@@ -78,7 +88,7 @@ export class UploadService {
         createdAt: fileRecord.createdAt,
       };
     } catch (error) {
-      // 4. COMPENSATING TRANSACTION: If PostgreSQL database save fails, clean up Cloudinary asset
+      // 5. COMPENSATING TRANSACTION: If PostgreSQL database save fails, clean up Cloudinary asset
       if (cloudinaryResult?.public_id) {
         logger.error(
           { publicId: cloudinaryResult.public_id, error },
@@ -94,8 +104,13 @@ export class UploadService {
         } catch (cleanupErr) {
           logger.error(
             { publicId: cloudinaryResult.public_id, cleanupErr },
-            'CRITICAL: Cloudinary deletion compensating transaction failed! Asset orphaned.'
+            'CRITICAL: Cloudinary deletion compensating transaction failed! Enqueuing to RabbitMQ cleanup.queue...'
           );
+          // Enqueue to RabbitMQ cleanup.queue for async retry by Cleanup Worker
+          await rabbitMQProducer.publishCleanupJob('cleanup-cloudinary-file', {
+            publicId: cloudinaryResult.public_id,
+            resourceType: strategy.resourceType,
+          });
         }
       }
 

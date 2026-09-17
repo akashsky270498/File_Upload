@@ -29,6 +29,7 @@
   "author": "OmniMedia Architect",
   "license": "ISC",
   "dependencies": {
+    "amqplib": "^0.10.4",
     "bcrypt": "^5.1.1",
     "cloudinary": "^2.5.1",
     "cookie-parser": "^1.4.6",
@@ -53,6 +54,7 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
+    "@types/amqplib": "^0.10.5",
     "@types/bcrypt": "^5.0.2",
     "@types/cookie-parser": "^1.4.7",
     "@types/cors": "^2.8.17",

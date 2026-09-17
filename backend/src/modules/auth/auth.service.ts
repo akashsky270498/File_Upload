@@ -6,7 +6,8 @@ import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '.
 import { ConflictError, NotFoundError, UnauthorizedError, ValidationError } from '../../common/errors/app-error';
 import { logger } from '../../common/logger';
 import { authRepository, AuthRepository } from './auth.repository';
-import { RegisterDTO, AuthTokensResponse, UserAuthProfile } from './auth.interface';
+import { RegisterDTO, AuthTokensResponse } from './auth.interface';
+import { rabbitMQProducer } from '../../infrastructure/rabbitmq/rabbitmq.producer';
 
 export class AuthService {
   constructor(private readonly repository: AuthRepository = authRepository) {}
@@ -33,6 +34,13 @@ export class AuthService {
     });
 
     logger.info({ userId: user.id, email: user.email }, 'User registered successfully. Queuing welcome email job...');
+
+    // Publish background job to RabbitMQ email.queue
+    await rabbitMQProducer.publishEmailJob('send-welcome-email', {
+      userId: user.id,
+      email: user.email,
+      firstName: user.firstName,
+    });
 
     return {
       id: user.id,
@@ -114,6 +122,12 @@ export class AuthService {
     });
 
     logger.info({ email, rawOtp }, 'OTP generated for login. Queuing email delivery job...');
+
+    // Publish background job to RabbitMQ email.queue
+    await rabbitMQProducer.publishEmailJob('send-login-otp', {
+      email,
+      otp: rawOtp,
+    });
 
     return {
       message: 'OTP sent to your email address.',

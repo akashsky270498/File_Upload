@@ -16,6 +16,7 @@ const envSchema = Joi.object({
   REDIS_HOST: Joi.string().default('localhost'),
   REDIS_PORT: Joi.number().default(6379),
   REDIS_PASSWORD: Joi.string().allow('').optional(),
+  RABBITMQ_URL: Joi.string().default('amqp://omnimedia:omnimedia_password@127.0.0.1:5672'),
   CLIENT_URL: Joi.string().default('http://localhost:5173'),
   JWT_ACCESS_SECRET: Joi.string().default('super_secret_access_key_12345!@#$%'),
   JWT_ACCESS_EXPIRATION: Joi.string().default('15m'),
@@ -45,6 +46,9 @@ export const env = {
     host: envVars.REDIS_HOST as string,
     port: envVars.REDIS_PORT as number,
     password: envVars.REDIS_PASSWORD as string || undefined,
+  },
+  rabbitmq: {
+    url: envVars.RABBITMQ_URL as string,
   },
   jwt: {
     accessSecret: envVars.JWT_ACCESS_SECRET as string,

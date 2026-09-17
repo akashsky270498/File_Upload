@@ -2,8 +2,11 @@ import Redis from 'ioredis';
 import { env } from './env';
 import { logger } from '../common/logger';
 
+// Force 127.0.0.1 IPv4 resolution to prevent Node.js IPv6 (::1) lookup delays
+const redisHost = env.redis.host === 'localhost' ? '127.0.0.1' : env.redis.host;
+
 export const redisClient = new Redis({
-  host: env.redis.host,
+  host: redisHost,
   port: env.redis.port,
   password: env.redis.password,
   lazyConnect: true,
