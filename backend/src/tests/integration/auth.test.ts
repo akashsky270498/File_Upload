@@ -12,7 +12,9 @@ describe('Auth API Integration Tests', () => {
 
   afterAll(async () => {
     if (redisClient) {
-      await redisClient.quit().catch(() => {});
+      await redisClient.quit().catch(() => {
+        redisClient.disconnect();
+      });
     }
   });
 

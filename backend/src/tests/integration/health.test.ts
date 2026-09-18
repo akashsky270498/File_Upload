@@ -12,7 +12,9 @@ describe('Health Check API Integration Test', () => {
 
   afterAll(async () => {
     if (redisClient) {
-      await redisClient.quit().catch(() => {});
+      await redisClient.quit().catch(() => {
+        redisClient.disconnect();
+      });
     }
   });
 

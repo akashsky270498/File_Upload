@@ -12,6 +12,9 @@ export const redisClient = new Redis({
   lazyConnect: true,
   maxRetriesPerRequest: 3,
   retryStrategy(times) {
+    if (env.nodeEnv === 'test' || process.env.NODE_ENV === 'test') {
+      return null; // Disable reconnection retries during test execution
+    }
     const delay = Math.min(times * 100, 3000);
     logger.warn({ times, delay }, 'Reconnecting to Redis server...');
     return delay;
