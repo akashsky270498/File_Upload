@@ -140,6 +140,20 @@ export const resolvers = {
     profileImage: (parent: User) => parent.profileImage,
     profileImageUrl: (parent: User) => parent.profileImage,
     coverImageUrl: (parent: User) => parent.coverImage,
+    createdAt: (parent: User) => {
+      const val = parent.createdAt || (parent as any).created_at;
+      if (!val) return new Date().toISOString();
+      const d = new Date(val);
+      if (isNaN(d.getTime())) {
+        const num = Number(val);
+        if (!isNaN(num) && num > 0) {
+          const numDate = new Date(num > 1e11 ? num : num * 1000);
+          if (!isNaN(numDate.getTime())) return numDate.toISOString();
+        }
+        return new Date().toISOString();
+      }
+      return d.toISOString();
+    },
     files: async (parent: User) => {
       return File.findAll({
         where: { userId: parent.id },

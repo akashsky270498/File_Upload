@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Eye, HardDrive, Calendar, Download, Tag, Trash2 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { setSelectedFile } from '../../store/slices/filesSlice';
 import { openConfirmModal } from '../../store/slices/uiSlice';
+import { PublicProfileModal } from '../users/PublicProfileModal';
 
 const getInitials = (fullName: string): string => {
   if (!fullName || !fullName.trim()) return 'U';
@@ -17,6 +18,7 @@ export const MediaPreviewModal: React.FC = () => {
   const dispatch = useAppDispatch();
   const file = useAppSelector((state) => state.files.selectedFile);
   const currentUser = useAppSelector((state) => state.auth.user);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   if (!file) return null;
 
@@ -174,7 +176,14 @@ export const MediaPreviewModal: React.FC = () => {
 
           {/* Information Card */}
           <div className="preview-info-card">
-            <div className="uploader-box">
+            <div
+              className="uploader-box"
+              onClick={() => {
+                if (uploaderId) setSelectedUserId(uploaderId);
+              }}
+              style={{ cursor: 'pointer' }}
+              title="Click to view user profile"
+            >
               <div className="uploader-avatar">
                 {uploaderAvatar ? (
                   <img src={uploaderAvatar} alt={uploaderName} />
@@ -218,6 +227,12 @@ export const MediaPreviewModal: React.FC = () => {
             </div>
           </div>
         </div>
+
+        <PublicProfileModal
+          userId={selectedUserId}
+          isOpen={Boolean(selectedUserId)}
+          onClose={() => setSelectedUserId(null)}
+        />
       </div>
     </div>
   );

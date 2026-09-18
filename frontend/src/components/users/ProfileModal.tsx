@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Save, Mail, Camera, Check, User as UserIcon, Lock, Key } from 'lucide-react';
+import { X, Save, Mail, Phone, Camera, Check, User as UserIcon, Lock, Key } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { usersApi } from '../../services/usersApi';
 import { authApi } from '../../services/authApi';
@@ -35,6 +35,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
   // Profile form state
   const [firstName, setFirstName] = useState(currentUser?.firstName || '');
   const [lastName, setLastName] = useState(currentUser?.lastName || '');
+  const [mobileNumber, setMobileNumber] = useState(currentUser?.mobileNumber || '');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>(currentUser?.avatarUrl || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -69,6 +70,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
       await usersApi.updateProfile({
         firstName,
         lastName,
+        mobileNumber,
         profileImage: avatarFile ? undefined : previewUrl,
         avatarFile: avatarFile || undefined,
       });
@@ -179,10 +181,18 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                 onChange={handleFileChange}
               />
 
-              <span className="user-email" style={{ marginTop: '0.75rem' }}>
-                <Mail size={13} style={{ display: 'inline', marginRight: '4px' }} />
-                {currentUser?.email}
-              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', marginTop: '0.75rem' }}>
+                <span className="user-email">
+                  <Mail size={13} style={{ display: 'inline', marginRight: '4px' }} />
+                  {currentUser?.email}
+                </span>
+                {currentUser?.mobileNumber && (
+                  <span className="user-mobile" style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                    <Phone size={13} style={{ display: 'inline', marginRight: '4px' }} />
+                    {currentUser?.mobileNumber}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Preset Avatars Row - Only 2 Avatars */}
@@ -226,6 +236,17 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                   required
                 />
               </div>
+            </div>
+
+            {/* Mobile Number Field */}
+            <div className="form-group" style={{ marginTop: '0.75rem' }}>
+              <label>Mobile Number</label>
+              <input
+                type="tel"
+                placeholder="+919876543210"
+                value={mobileNumber}
+                onChange={(e) => setMobileNumber(e.target.value)}
+              />
             </div>
 
             <div className="modal-footer" style={{ marginTop: '1.5rem' }}>

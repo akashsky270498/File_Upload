@@ -28,6 +28,7 @@ export const usersApi = {
           status
           profileImage
           profileImageUrl
+          coverImageUrl
           createdAt
         }
       }
@@ -36,6 +37,41 @@ export const usersApi = {
     const data = res.me
       ? { ...res.me, avatarUrl: res.me.profileImageUrl || res.me.profileImage || res.me.avatarUrl }
       : res.me;
+
+    return {
+      success: true,
+      statusCode: 200,
+      message: 'User profile fetched via GraphQL',
+      data,
+      timestamp: new Date().toISOString(),
+    };
+  },
+
+  /**
+   * Fetch user profile by ID via GraphQL
+   */
+  getUserById: async (id: string): Promise<ApiResponse<User>> => {
+    const query = `
+      query GetUserById($id: ID!) {
+        user(id: $id) {
+          id
+          email
+          firstName
+          lastName
+          mobileNumber
+          role
+          status
+          profileImage
+          profileImageUrl
+          coverImageUrl
+          createdAt
+        }
+      }
+    `;
+    const res = await executeGraphQL<{ user: User }>(query, { id });
+    const data = res.user
+      ? { ...res.user, avatarUrl: res.user.profileImageUrl || res.user.profileImage || res.user.avatarUrl }
+      : res.user;
 
     return {
       success: true,

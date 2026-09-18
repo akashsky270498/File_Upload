@@ -74,6 +74,17 @@ export class UsersService {
   }
 
   /**
+   * Get user profile by ID
+   */
+  public async getUserById(userId: string): Promise<UserProfileResponse> {
+    const user = await this.repository.findById(userId);
+    if (!user) {
+      throw new NotFoundError(`User with ID '${userId}' not found`);
+    }
+    return this.mapToResponse(user);
+  }
+
+  /**
    * Map database User model to UserProfileResponse DTO
    */
   private mapToResponse(user: User): UserProfileResponse {

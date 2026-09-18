@@ -1,9 +1,10 @@
-import React from 'react';
-import { Image as ImageIcon, Video, Music, FileText, Eye, Trash2, Calendar, HardDrive } from 'lucide-react';
+import React, { useState } from 'react';
+import { Image as ImageIcon, Video, Music, FileText, Eye, Trash2, Calendar, HardDrive, User as UserIcon } from 'lucide-react';
 import { MediaFile } from '../../types/file';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { fetchFileDetails, setSelectedFile } from '../../store/slices/filesSlice';
 import { openConfirmModal } from '../../store/slices/uiSlice';
+import { PublicProfileModal } from '../users/PublicProfileModal';
 
 interface FileCardProps {
   file: MediaFile;
@@ -12,6 +13,7 @@ interface FileCardProps {
 export const FileCard: React.FC<FileCardProps> = ({ file }) => {
   const dispatch = useAppDispatch();
   const currentUser = useAppSelector((state) => state.auth.user);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const uploaderObj = (file as any).user || file.uploader;
   const uploaderId = uploaderObj?._id || uploaderObj?.id || file.userId || (file as any).user_id;
@@ -146,7 +148,24 @@ export const FileCard: React.FC<FileCardProps> = ({ file }) => {
 
         <div className="file-meta" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           {uploaderName && (
-            <div className="uploader-name-tag" style={{ fontSize: '0.8rem', fontWeight: 600, color: '#818cf8', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <div
+              className="uploader-name-tag"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (uploaderId) setSelectedUserId(uploaderId);
+              }}
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                color: '#818cf8',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                cursor: 'pointer',
+              }}
+              title="Click to view user profile"
+            >
+              <UserIcon size={12} />
               <span>Uploaded by {uploaderName}</span>
             </div>
           )}
@@ -166,6 +185,12 @@ export const FileCard: React.FC<FileCardProps> = ({ file }) => {
             </div>
           </div>
         </div>
+
+        <PublicProfileModal
+          userId={selectedUserId}
+          isOpen={Boolean(selectedUserId)}
+          onClose={() => setSelectedUserId(null)}
+        />
       </div>
     </div>
   );
