@@ -1,3 +1,9 @@
+// ==========================================
+// 🔎 ELASTICSEARCH INDEX MANAGER
+// ==========================================
+// Ye manager Elasticsearch Index schema (`omnimedia_files`), custom Edge-NGram Auto-complete Analyzers,
+// bulk synchronization aur live document indexing/deletion manage karta hai.
+
 import { esClient, INDEX_NAMES } from '../../config/elasticsearch';
 import { logger } from '../../common/logger';
 import { File } from '../postgres/models/file.model';
@@ -19,7 +25,7 @@ export interface FileSearchDocument {
 
 export class ElasticsearchIndexManager {
   /**
-   * Initialize omnimedia_files index schema, custom analyzers, and mappings
+   * 1. `omnimedia_files` Index create karta hai agar exist na karta ho + edge_ngram autocomplete tokenizer set karta hai
    */
   public async initFilesIndex(): Promise<void> {
     try {
@@ -35,7 +41,7 @@ export class ElasticsearchIndexManager {
               analysis: {
                 tokenizer: {
                   autocomplete_tokenizer: {
-                    type: 'edge_ngram',
+                    type: 'edge_ngram', // Instant search typing autocomplete for 1 to 15 chars
                     min_gram: 1,
                     max_gram: 15,
                     token_chars: ['letter', 'digit'],
@@ -102,7 +108,7 @@ export class ElasticsearchIndexManager {
         }
       }
 
-      // Sync existing PostgreSQL records to Elasticsearch
+      // Server startup par PostgreSQL DB records ko Elasticsearch me bulk sync karte hain
       await this.syncDatabaseToElasticsearch();
     } catch (error) {
       logger.error({ error }, 'Elasticsearch Index Manager: Failed to initialize index.');
@@ -111,7 +117,7 @@ export class ElasticsearchIndexManager {
   }
 
   /**
-   * Sync all existing PostgreSQL database files to Elasticsearch index on server boot
+   * 2. PostgreSQL DB records ko Elasticsearch me Bulk Sync karne ka method
    */
   public async syncDatabaseToElasticsearch(): Promise<void> {
     try {
@@ -148,7 +154,7 @@ export class ElasticsearchIndexManager {
   }
 
   /**
-   * Update views count for a specific file document in Elasticsearch
+   * 3. Views count increment hone par Elasticsearch document me views count sync karna
    */
   public async updateViewsCount(fileId: string, viewsCount: number): Promise<void> {
     try {
@@ -163,7 +169,7 @@ export class ElasticsearchIndexManager {
   }
 
   /**
-   * Index or Update a File Document in Elasticsearch
+   * 4. Single File Document Index / Update karna
    */
   public async indexFile(doc: FileSearchDocument): Promise<void> {
     try {
@@ -180,7 +186,7 @@ export class ElasticsearchIndexManager {
   }
 
   /**
-   * Delete a File Document from Elasticsearch
+   * 5. File delete hone par Elasticsearch Index se remove karna
    */
   public async deleteFile(fileId: string): Promise<void> {
     try {
@@ -197,3 +203,4 @@ export class ElasticsearchIndexManager {
 }
 
 export const esIndexManager = new ElasticsearchIndexManager();
+

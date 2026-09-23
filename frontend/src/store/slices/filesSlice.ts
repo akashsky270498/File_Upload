@@ -1,3 +1,8 @@
+// ==========================================
+// 📁 REDUX FILES SLICE (State Management)
+// ==========================================
+// Ye file Files Feed, Search & Filter Filters, Uploads Progress, Real-time WebSockets Live Additions/Deletions, aur Notification History manage karti hai.
+
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { FilesState, MediaFile, SearchFilter, RealtimeFileNotification } from '../../types/file';
 import { filesApi } from '../../services/filesApi';
@@ -24,6 +29,9 @@ const initialState: FilesState = {
   unreadCount: 0,
 };
 
+/**
+ * 1. Fetch Files Async Thunk (Elasticsearch Search & Filter API)
+ */
 export const fetchFiles = createAsyncThunk<ApiResponse<MediaFile[]>, SearchFilter, { rejectValue: string }>(
   'files/fetchFiles',
   async (filter, { rejectWithValue }) => {
@@ -36,6 +44,9 @@ export const fetchFiles = createAsyncThunk<ApiResponse<MediaFile[]>, SearchFilte
   }
 );
 
+/**
+ * 2. Upload Single File Async Thunk (Cloudinary Stream Upload with Progress)
+ */
 export const uploadFileThunk = createAsyncThunk<MediaFile, { formData: FormData; onProgress?: (p: number) => void }, { rejectValue: string }>(
   'files/uploadFile',
   async ({ formData, onProgress }, { rejectWithValue }) => {
@@ -52,6 +63,9 @@ export const uploadFileThunk = createAsyncThunk<MediaFile, { formData: FormData;
   }
 );
 
+/**
+ * 3. Upload Batch Files Async Thunk (Up to 5 files simultaneously)
+ */
 export const uploadBatchThunk = createAsyncThunk<MediaFile[], { formData: FormData; onProgress?: (p: number) => void }, { rejectValue: string }>(
   'files/uploadBatch',
   async ({ formData, onProgress }, { rejectWithValue }) => {
@@ -68,6 +82,9 @@ export const uploadBatchThunk = createAsyncThunk<MediaFile[], { formData: FormDa
   }
 );
 
+/**
+ * 4. Fetch File Details Async Thunk (View Counter Increments via REST / GraphQL)
+ */
 export const fetchFileDetails = createAsyncThunk<MediaFile, string, { rejectValue: string }>(
   'files/fetchFileDetails',
   async (id, { rejectWithValue }) => {
@@ -83,6 +100,9 @@ export const fetchFileDetails = createAsyncThunk<MediaFile, string, { rejectValu
   }
 );
 
+/**
+ * 5. Delete File Async Thunk (PostgreSQL, Cloudinary, & ES deletion)
+ */
 export const deleteFileThunk = createAsyncThunk<string, string, { rejectValue: string }>(
   'files/deleteFile',
   async (id, { rejectWithValue }) => {
@@ -138,6 +158,7 @@ const filesSlice = createSlice({
       state.notificationsHistory = [];
       state.unreadCount = 0;
     },
+    // Real-time Socket.io Sync: Insert new file to feed instantly without refresh
     addLiveFile: (state, action: PayloadAction<MediaFile>) => {
       const incomingId = action.payload.id || action.payload._id;
       const existing = state.files.some((f) => (f.id || f._id) === incomingId);
@@ -145,6 +166,7 @@ const filesSlice = createSlice({
         state.files.unshift(action.payload);
       }
     },
+    // Real-time Socket.io Sync: Remove deleted file from feed instantly
     removeLiveFile: (state, action: PayloadAction<string>) => {
       const targetId = action.payload;
       state.files = state.files.filter((f) => (f.id || f._id) !== targetId);
@@ -158,7 +180,7 @@ const filesSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Fetch Files
+      // Fetch Files reducers
       .addCase(fetchFiles.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -185,7 +207,6 @@ const filesSlice = createSlice({
           state.meta = null;
         }
 
-        // For page 1, replace file list. For page > 1 (infinite scroll), append unique items.
         if (state.filters.page === 1) {
           state.files = incomingFiles;
         } else {
@@ -202,7 +223,7 @@ const filesSlice = createSlice({
         state.error = action.payload || 'Failed to fetch media files';
       })
 
-      // Upload Single File
+      // Upload Single File reducers
       .addCase(uploadFileThunk.pending, (state) => {
         state.isUploading = true;
         state.uploadProgress = 0;
@@ -223,7 +244,7 @@ const filesSlice = createSlice({
         state.error = action.payload || 'Upload failed';
       })
 
-      // Upload Batch Files (up to 5 files)
+      // Upload Batch Files reducers
       .addCase(uploadBatchThunk.pending, (state) => {
         state.isUploading = true;
         state.uploadProgress = 0;
@@ -247,7 +268,7 @@ const filesSlice = createSlice({
         state.error = action.payload || 'Batch upload failed';
       })
 
-      // Fetch File Details
+      // Fetch File Details reducers
       .addCase(fetchFileDetails.fulfilled, (state, action: PayloadAction<MediaFile>) => {
         state.selectedFile = action.payload;
         const targetId = action.payload.id || action.payload._id;
@@ -257,7 +278,7 @@ const filesSlice = createSlice({
         }
       })
 
-      // Delete File (Instant UI Removal)
+      // Delete File reducers
       .addCase(deleteFileThunk.fulfilled, (state, action: PayloadAction<string>) => {
         const deletedId = action.payload;
         state.files = state.files.filter((f) => (f.id || f._id) !== deletedId);
@@ -285,3 +306,4 @@ export const {
 } = filesSlice.actions;
 
 export default filesSlice.reducer;
+

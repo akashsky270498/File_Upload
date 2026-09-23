@@ -1,3 +1,9 @@
+// ==========================================
+// 🃏 FILE CARD COMPONENT
+// ==========================================
+// Ye component dashboard feed me uploaded media/documents rendering, instant thumbnail previews (Images, Videos, Audio, PDFs),
+// uploader details, views count, aur delete action button show karta hai.
+
 import React, { useState } from 'react';
 import { Image as ImageIcon, Video, Music, FileText, Eye, Trash2, Calendar, HardDrive, User as UserIcon } from 'lucide-react';
 import { MediaFile } from '../../types/file';
@@ -15,6 +21,7 @@ export const FileCard: React.FC<FileCardProps> = ({ file }) => {
   const currentUser = useAppSelector((state) => state.auth.user);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
+  // Uploader ID aur permissions check (Owner ya Admin hai tabhi delete button dikhayenge)
   const uploaderObj = (file as any).user || file.uploader;
   const uploaderId = uploaderObj?._id || uploaderObj?.id || file.userId || (file as any).user_id;
   const currentUserId = currentUser?.id || currentUser?._id;
@@ -30,6 +37,7 @@ export const FileCard: React.FC<FileCardProps> = ({ file }) => {
   const isVideo = fileTypeLower.includes('video');
   const isAudio = fileTypeLower.includes('audio');
 
+  // File type icon selecter
   const renderTypeIcon = () => {
     if (isImage) return <ImageIcon size={18} className="type-icon type-image" />;
     if (isVideo) return <Video size={18} className="type-icon type-video" />;
@@ -37,6 +45,7 @@ export const FileCard: React.FC<FileCardProps> = ({ file }) => {
     return <FileText size={18} className="type-icon type-pdf" />;
   };
 
+  // Human-readable file size formatter (KB / MB / GB)
   const formatFileSize = (bytes?: number): string => {
     if (!bytes || bytes === 0) return '0 B';
     const k = 1024;
@@ -45,6 +54,7 @@ export const FileCard: React.FC<FileCardProps> = ({ file }) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
+  // Safe Date formatter
   const formatDate = (dateStr?: string): string => {
     if (!dateStr) return new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
     const d = new Date(dateStr);
@@ -64,11 +74,13 @@ export const FileCard: React.FC<FileCardProps> = ({ file }) => {
     return 'DOCUMENT';
   };
 
+  // Card click hone par File Modal Open karna aur View Counter increment query trigger karna
   const handleCardClick = () => {
     dispatch(setSelectedFile(file));
     if (fileId) dispatch(fetchFileDetails(fileId));
   };
 
+  // Delete button click handler
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (fileId) {
@@ -186,6 +198,7 @@ export const FileCard: React.FC<FileCardProps> = ({ file }) => {
           </div>
         </div>
 
+        {/* User Public Profile Modal trigger */}
         <PublicProfileModal
           userId={selectedUserId}
           isOpen={Boolean(selectedUserId)}
@@ -195,3 +208,4 @@ export const FileCard: React.FC<FileCardProps> = ({ file }) => {
     </div>
   );
 };
+

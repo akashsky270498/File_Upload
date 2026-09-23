@@ -1,3 +1,8 @@
+// ==========================================
+// 🧩 GRAPHQL RESOLVERS (Data Logic Executer)
+// ==========================================
+// GraphQL queries aur mutations ka actual business execution logic yahan handle hota hai.
+
 import { GraphQLError } from 'graphql';
 import { User } from '../infrastructure/postgres/models/user.model';
 import { File } from '../infrastructure/postgres/models/file.model';
@@ -9,7 +14,11 @@ import { usersService } from '../modules/users/users.service';
 import { uploadRepository } from '../modules/uploads/upload.repository';
 
 export const resolvers = {
+  // ==========================================
+  // 🔍 READ QUERIES RESOLVERS
+  // ==========================================
   Query: {
+    // 1. Logged-in user profile fetcher ('me')
     me: async (_parent: any, _args: any, context: GraphQLContext) => {
       if (!context.currentUser) {
         throw new GraphQLError('Authentication token required', {
@@ -27,6 +36,7 @@ export const resolvers = {
       return user;
     },
 
+    // 2. ID se kisi bhi user ki public profile details fetcher ('user')
     user: async (_parent: any, args: { id: string }) => {
       const user = await User.findByPk(args.id);
       if (!user) {
@@ -37,6 +47,7 @@ export const resolvers = {
       return user;
     },
 
+    // 3. Uploaded files list fetcher ('files')
     files: async (_parent: any, args: { fileType?: string; limit?: number; offset?: number }) => {
       const limit = Math.min(100, Math.max(1, args.limit || 10));
       const offset = Math.max(0, args.offset || 0);
@@ -54,6 +65,7 @@ export const resolvers = {
       return files;
     },
 
+    // 4. Single file fetcher with instant view increment ('file')
     file: async (_parent: any, args: { id: string }) => {
       try {
         const file = await uploadRepository.findByIdAndIncrementView(args.id);
@@ -65,6 +77,7 @@ export const resolvers = {
       }
     },
 
+    // 5. My Notifications fetcher ('myNotifications')
     myNotifications: async (_parent: any, args: { limit?: number }, context: GraphQLContext) => {
       if (!context.currentUser) {
         throw new GraphQLError('Authentication token required', {
@@ -83,6 +96,7 @@ export const resolvers = {
       return notifications;
     },
 
+    // 6. System audit logs fetcher ('auditLogs')
     auditLogs: async (_parent: any, args: { limit?: number }) => {
       const limit = Math.min(100, Math.max(1, args.limit || 50));
 
@@ -95,7 +109,11 @@ export const resolvers = {
     },
   },
 
+  // ==========================================
+  // ✏️ WRITE MUTATIONS RESOLVERS
+  // ==========================================
   Mutation: {
+    // Authenticated User Profile Update Handler
     updateProfile: async (_parent: any, args: { input: { firstName?: string; lastName?: string; mobileNumber?: string; profileImageUrl?: string; profileImage?: string } }, context: GraphQLContext) => {
       if (!context.currentUser) {
         throw new GraphQLError('Authentication token required', {
@@ -122,9 +140,13 @@ export const resolvers = {
     },
   },
 
+  // ==========================================
+  // ⚡ FIELD LEVEL RESOLVERS (DataLoader Batching)
+  // ==========================================
   File: {
     viewsCount: (parent: File) => Number(parent.viewsCount) || 0,
 
+    // N+1 Query Problem solve karne ke liye DataLoader Batching use hoti hai
     user: async (parent: File, _args: any, context: GraphQLContext) => {
       if ((parent as any).user) return (parent as any).user;
       if (!parent.userId) return null;
@@ -140,6 +162,7 @@ export const resolvers = {
     profileImage: (parent: User) => parent.profileImage,
     profileImageUrl: (parent: User) => parent.profileImage,
     coverImageUrl: (parent: User) => parent.coverImage,
+    // Safe ISO CreatedAt Date Formatter (Invalid Date se protection)
     createdAt: (parent: User) => {
       const val = parent.createdAt || (parent as any).created_at;
       if (!val) return new Date().toISOString();
@@ -162,4 +185,5 @@ export const resolvers = {
     },
   },
 };
+
 

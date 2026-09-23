@@ -1,15 +1,23 @@
+// ==========================================
+// 🔷 GRAPHQL TYPE DEFINITIONS (Schema)
+// ==========================================
+// Yahan GraphQL ke Types, Enums, Inputs, Queries aur Mutations define kiye gaye hain.
+
 export const typeDefs = `#graphql
+  # User Roles System
   enum UserRole {
     USER
     ADMIN
   }
 
+  # User Status States
   enum UserStatus {
     ACTIVE
     BLOCKED
     PENDING
   }
 
+  # File Categories
   enum FileType {
     PROFILE_IMAGE
     COVER_IMAGE
@@ -19,6 +27,7 @@ export const typeDefs = `#graphql
     VIDEO
   }
 
+  # User Profile Schema
   type User {
     id: ID!
     email: String!
@@ -34,12 +43,14 @@ export const typeDefs = `#graphql
     createdAt: String!
   }
 
+  # Tag Object for Categorizing Files
   type Tag {
     id: ID!
     name: String!
     createdAt: String!
   }
 
+  # File Schema (Uploaded media/docs)
   type File {
     id: ID!
     userId: ID!
@@ -57,6 +68,7 @@ export const typeDefs = `#graphql
     createdAt: String!
   }
 
+  # Notification Schema
   type Notification {
     id: ID!
     userId: ID!
@@ -67,6 +79,7 @@ export const typeDefs = `#graphql
     createdAt: String!
   }
 
+  # Audit Log Schema (System Action Tracking)
   type AuditLog {
     id: ID!
     userId: ID
@@ -78,6 +91,7 @@ export const typeDefs = `#graphql
     createdAt: String!
   }
 
+  # Input DTO for Profile Update
   input UpdateProfileInput {
     firstName: String
     lastName: String
@@ -85,29 +99,36 @@ export const typeDefs = `#graphql
     profileImageUrl: String
   }
 
+  # ==========================================
+  # 🔍 GRAPHQL QUERIES (Data Fetching)
+  # ==========================================
   type Query {
-    # Current authenticated user profile
+    # Current logged-in user ka profile return karta hai
     me: User
 
-    # Query specific user by ID
+    # ID se kisi bhi user ka public profile view karne ke liye
     user(id: ID!): User
 
-    # Query files list with optional filtering & pagination
+    # Files ki list filter/pagination ke sath fetch karne ke liye
     files(fileType: FileType, limit: Int = 20, offset: Int = 0): [File!]!
 
-    # Query single file metadata by ID
+    # Single File detail fetch karne ke liye (Views counter increment ke sath)
     file(id: ID!): File
 
-    # Query notifications for logged-in user
+    # Authenticated User ki notifications list
     myNotifications(limit: Int = 20): [Notification!]!
 
-    # Query audit logs (Admin or system audit view)
+    # System activity audit logs list
     auditLogs(limit: Int = 50): [AuditLog!]!
   }
 
+  # ==========================================
+  # ✏️ GRAPHQL MUTATIONS (Data Modification)
+  # ==========================================
   type Mutation {
-    # Update authenticated user profile
+    # Current logged-in user ki profile details update karta hai
     updateProfile(input: UpdateProfileInput!): User!
   }
 `;
+
 

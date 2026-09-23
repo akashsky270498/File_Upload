@@ -1,9 +1,16 @@
+// ==========================================
+// ⚙️ ENVIRONMENT CONFIGURATION & VALIDATION
+// ==========================================
+// Ye file `.env` variables load karti hai aur Joi Schema se unhe validate karke application settings return karti hai.
+
 import dotenv from 'dotenv';
 import path from 'path';
 import Joi from 'joi';
 
+// Root directory se .env file load karte hain
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
+// Strict Joi Validation Schema to verify all required Environment Variables
 const envSchema = Joi.object({
   NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
   PORT: Joi.number().default(5000),
@@ -37,6 +44,7 @@ if (error) {
   throw new Error(`Config validation error: ${error.message}`);
 }
 
+// Strongly-typed Exportable Environment Config Object
 export const env = {
   nodeEnv: envVars.NODE_ENV as string,
   port: envVars.PORT as number,
@@ -77,3 +85,4 @@ export const env = {
     refreshExpiration: envVars.JWT_REFRESH_EXPIRATION as string,
   },
 };
+

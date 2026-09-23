@@ -1,3 +1,8 @@
+// ==========================================
+// 🕹️ SEARCH CONTROLLER (HTTP Route Handler)
+// ==========================================
+// Ye controller Elasticsearch & Postgres Search Endpoint (GET/POST /api/v1/search) handle karta hai.
+
 import { Request, Response, NextFunction } from 'express';
 import { searchService, SearchService } from './search.service';
 
@@ -5,7 +10,7 @@ export class SearchController {
   constructor(private readonly service: SearchService = searchService) {}
 
   /**
-   * GET /api/v1/search
+   * Search Query Handler (GET/POST /api/v1/search) - Query, File Type Filter, Tag Filter, Sorting, Pagination
    */
   public search = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -43,3 +48,4 @@ export class SearchController {
 }
 
 export const searchController = new SearchController();
+

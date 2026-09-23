@@ -1,3 +1,8 @@
+// ==========================================
+// 🚀 KAFKA EVENT CONSUMERS ROUTER
+// ==========================================
+// Ye file Kafka Event Bus Consumers ko subscribe karwa kar `AUDIT_EVENTS`, `USER_EVENTS`, aur `MEDIA_EVENTS` route karti hai.
+
 import { EachMessagePayload } from 'kafkajs';
 import { kafkaConsumer, KAFKA_TOPICS } from '../config/kafka';
 import { KafkaEventEnvelope } from '../infrastructure/kafka/kafka.producer';
@@ -11,12 +16,13 @@ export const startAllKafkaConsumers = async (): Promise<void> => {
     await kafkaConsumer.connect();
     logger.info('Kafka Consumer connected to group omnimedia-consumer-group.');
 
-    // Subscribe to all domain event topics
+    // Sabhi Kafka topics subscribe karte hain
     await kafkaConsumer.subscribe({
       topics: Object.values(KAFKA_TOPICS),
       fromBeginning: false,
     });
 
+    // Kafka message consumer loop
     await kafkaConsumer.run({
       eachMessage: async ({ topic, partition, message }: EachMessagePayload) => {
         if (!message.value) return;
@@ -28,15 +34,16 @@ export const startAllKafkaConsumers = async (): Promise<void> => {
             'Kafka Consumer: Routing message...'
           );
 
+          // Topic-wise event handlers router
           switch (topic) {
             case KAFKA_TOPICS.AUDIT_EVENTS:
-              await handleAuditEvent(envelope);
+              await handleAuditEvent(envelope); // Audit log DB saver
               break;
             case KAFKA_TOPICS.USER_EVENTS:
-              await handleUserEvent(envelope);
+              await handleUserEvent(envelope);   // User registration metrics
               break;
             case KAFKA_TOPICS.MEDIA_EVENTS:
-              await handleMediaEvent(envelope);
+              await handleMediaEvent(envelope);  // Media events processor
               break;
             default:
               logger.warn({ topic }, 'Received message from unmapped Kafka topic');
@@ -52,3 +59,4 @@ export const startAllKafkaConsumers = async (): Promise<void> => {
     logger.error({ error }, 'Failed to start Kafka Consumers.');
   }
 };
+

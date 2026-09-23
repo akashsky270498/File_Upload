@@ -1,3 +1,8 @@
+// ==========================================
+// 🔐 AUTHENTICATION SERVICE (Business Logic)
+// ==========================================
+// Ye service User Registration, Login, OTP Verification, JWT Tokens, Passwords aur Session Revocation handle karti hai.
+
 import crypto from 'crypto';
 import { UserRole, UserStatus } from '../../infrastructure/postgres/models/user.model';
 import { OtpType } from '../../infrastructure/postgres/models/otp-verification.model';
@@ -20,7 +25,7 @@ export class AuthService {
   constructor(private readonly repository: AuthRepository = authRepository) {}
 
   /**
-   * Register a new User
+   * 1. Naya User Register karta hai (RabbitMQ se Welcome Email Queue aur Kafka Event Push karta hai)
    */
   public async register(dto: RegisterDTO): Promise<{ id: string; email: string; message: string }> {
     const existingUser = await this.repository.findByEmailOrMobile(dto.email, dto.mobileNumber);
@@ -42,21 +47,21 @@ export class AuthService {
 
     logger.info({ userId: user.id, email: user.email }, 'User registered successfully. Queuing welcome email job...');
 
-    // 1. Publish background job to RabbitMQ email.queue
+    // 1. RabbitMQ Email Queue me Welcome Email Job bhejte hain
     await rabbitMQProducer.publishEmailJob('send-welcome-email', {
       userId: user.id,
       email: user.email,
       firstName: user.firstName,
     });
 
-    // 2. Publish Domain Event to Kafka omnimedia.user.events
+    // 2. Kafka User Events Topic me event publish karte hain
     await kafkaProducerService.publishUserEvent('USER_REGISTERED', user.id, {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
     });
 
-    // 3. Publish Audit Event to Kafka omnimedia.audit.events
+    // 3. Kafka Audit Log Event
     await kafkaProducerService.publishAuditEvent('USER_REGISTERED', user.id, {
       resource: 'user',
       resourceId: user.id,
@@ -70,7 +75,7 @@ export class AuthService {
   }
 
   /**
-   * Login with Email & Password
+   * 2. Email & Password se User Authenticate karke Access + Refresh Tokens issue karta hai
    */
   public async login(email: string, password: string): Promise<AuthTokensResponse> {
     const user = await this.repository.findByEmail(email);
@@ -88,10 +93,12 @@ export class AuthService {
       throw new UnauthorizedError('Invalid email or password');
     }
 
+    // JWT Access Token (Short-lived, e.g., 15m) aur Refresh Token (Long-lived, e.g., 7d) generate karte hain
     const payload = { userId: user.id, email: user.email, role: user.role };
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
 
+    // Database me Hashed Refresh Token save karte hain security ke liye
     const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
@@ -119,7 +126,7 @@ export class AuthService {
   }
 
   /**
-   * Request Login OTP
+   * 3. Password-less Email OTP Login Request (RabbitMQ se OTP Email Queue me bhejta hai)
    */
   public async requestLoginOtp(email: string): Promise<{ message: string }> {
     const user = await this.repository.findByEmail(email);
@@ -145,7 +152,7 @@ export class AuthService {
 
     logger.info({ email, rawOtp }, 'OTP generated for login. Queuing email delivery job...');
 
-    // Publish background job to RabbitMQ email.queue
+    // RabbitMQ Queue me OTP Mail Job publish karte hain
     await rabbitMQProducer.publishEmailJob('send-login-otp', {
       email,
       otp: rawOtp,
@@ -157,7 +164,7 @@ export class AuthService {
   }
 
   /**
-   * Verify Login OTP & Issue Tokens
+   * 4. Login OTP verify karke Tokens return karta hai
    */
   public async verifyLoginOtp(email: string, rawOtp: string): Promise<AuthTokensResponse> {
     const otpRecord = await this.repository.findOtp(email, OtpType.EMAIL_LOGIN);
@@ -221,7 +228,7 @@ export class AuthService {
   }
 
   /**
-   * Refresh Token Rotation
+   * 5. Refresh Token Rotation (Expired Access Token hone par naya Pair generate karta hai)
    */
   public async refreshTokens(incomingRefreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
     let payload;
@@ -239,6 +246,7 @@ export class AuthService {
       throw new UnauthorizedError('Refresh token has been revoked or expired');
     }
 
+    // Reuse prevention: Old refresh token ko instant revoke kar dete hain
     await this.repository.revokeRefreshToken(storedToken);
 
     const user = await this.repository.findById(payload.userId);
@@ -266,7 +274,7 @@ export class AuthService {
   }
 
   /**
-   * Logout (Revoke Refresh Token)
+   * 6. User Logout Handler (Refresh Token database se revoke karta hai)
    */
   public async logout(incomingRefreshToken: string): Promise<{ message: string }> {
     const tokenHash = crypto.createHash('sha256').update(incomingRefreshToken).digest('hex');
@@ -280,12 +288,11 @@ export class AuthService {
   }
 
   /**
-   * Request Password Reset OTP (Forgot Password)
+   * 7. Forgot Password Request Handler (OTP email triggers)
    */
   public async forgotPassword(dto: ForgotPasswordDTO): Promise<{ message: string }> {
     const user = await this.repository.findByEmail(dto.email);
 
-    // Generic response to prevent email enumeration attack
     if (!user) {
       logger.warn({ email: dto.email }, 'Forgot password requested for non-existing email');
       return {
@@ -295,7 +302,7 @@ export class AuthService {
 
     const rawOtp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpHash = crypto.createHash('sha256').update(rawOtp).digest('hex');
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     await this.repository.saveOtp({
       userId: user.id,
@@ -307,7 +314,6 @@ export class AuthService {
 
     logger.info({ email: user.email, rawOtp }, 'Password reset OTP generated. Queuing email delivery...');
 
-    // Publish background job to RabbitMQ email.queue
     await rabbitMQProducer.publishEmailJob('send-password-reset-otp', {
       email: user.email,
       otp: rawOtp,
@@ -320,7 +326,7 @@ export class AuthService {
   }
 
   /**
-   * Reset Password using OTP
+   * 8. Reset Password via OTP (All active user sessions ko revoke karta hai safety ke liye)
    */
   public async resetPassword(dto: ResetPasswordDTO): Promise<{ message: string }> {
     const otpRecord = await this.repository.findOtp(dto.email, OtpType.PASSWORD_RESET);
@@ -351,19 +357,15 @@ export class AuthService {
       throw new NotFoundError('User associated with OTP not found');
     }
 
-    // Hash new password & update
     const newPasswordHash = await hashPassword(dto.newPassword);
     await this.repository.updateUserPassword(user, newPasswordHash);
 
-    // Security requirement: Revoke all active refresh tokens for this user
+    // Security: Reset hone par sabhi purani devices logout kar dete hain
     await this.repository.revokeAllUserRefreshTokens(user.id);
-
-    // Delete OTP record after successful use
     await this.repository.deleteOtp(otpRecord);
 
     logger.info({ userId: user.id, email: user.email }, 'User password successfully reset. Revoked all sessions.');
 
-    // Audit event
     await kafkaProducerService.publishAuditEvent('PASSWORD_RESET', user.id, {
       resource: 'user',
       resourceId: user.id,
@@ -374,9 +376,8 @@ export class AuthService {
     };
   }
 
-
   /**
-   * Change Password (Authenticated User)
+   * 9. Change Password (Authenticated User)
    */
   public async changePassword(userId: string, dto: ChangePasswordDTO): Promise<{ message: string }> {
     const user = await this.repository.findById(userId);
@@ -400,12 +401,10 @@ export class AuthService {
     const newPasswordHash = await hashPassword(dto.newPassword);
     await this.repository.updateUserPassword(user, newPasswordHash);
 
-    // Revoke all active refresh tokens for security
     await this.repository.revokeAllUserRefreshTokens(user.id);
 
     logger.info({ userId: user.id, email: user.email }, 'User successfully changed password.');
 
-    // Audit event
     await kafkaProducerService.publishAuditEvent('PASSWORD_CHANGED', user.id, {
       resource: 'user',
       resourceId: user.id,
@@ -418,4 +417,5 @@ export class AuthService {
 }
 
 export const authService = new AuthService();
+
 

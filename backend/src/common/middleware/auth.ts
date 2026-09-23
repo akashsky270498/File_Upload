@@ -1,3 +1,8 @@
+// ==========================================
+// 🛡️ AUTHENTICATION & AUTHORIZATION MIDDLEWARE
+// ==========================================
+// Ye middleware API requests par JWT Token Authentication (HttpOnly Cookie / Bearer Header) aur User Role Authorization check karta hai.
+
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken, JwtPayload } from '../utils/jwt';
 import { UnauthorizedError, ForbiddenError } from '../errors/app-error';
@@ -7,6 +12,10 @@ export interface AuthenticatedRequest extends Request {
   user?: JwtPayload;
 }
 
+/**
+ * 1. JWT Access Token Authentication Guard
+ * Pehle HttpOnly cookie (`accessToken`) check karta hai, fallbacks to `Authorization: Bearer <token>` header.
+ */
 export const authenticateJwt = (req: AuthenticatedRequest, _res: Response, next: NextFunction): void => {
   let token: string | undefined = req.cookies?.accessToken;
 
@@ -20,13 +29,16 @@ export const authenticateJwt = (req: AuthenticatedRequest, _res: Response, next:
 
   try {
     const payload = verifyAccessToken(token);
-    req.user = payload;
+    req.user = payload; // Decoded payload (userId, email, role) req.user par assign kar dete hain
     next();
   } catch (error) {
     next(new UnauthorizedError('Invalid or expired access token'));
   }
 };
 
+/**
+ * 2. Role-Based Access Control (RBAC) Guard (e.g., ADMIN only routes protection)
+ */
 export const authorizeRoles = (...roles: UserRole[]) => {
   return (req: AuthenticatedRequest, _res: Response, next: NextFunction): void => {
     if (!req.user) {
@@ -40,3 +52,4 @@ export const authorizeRoles = (...roles: UserRole[]) => {
     next();
   };
 };
+

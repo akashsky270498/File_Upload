@@ -1,3 +1,8 @@
+// ==========================================
+// 👤 PUBLIC USER PROFILE MODAL
+// ==========================================
+// Ye component GraphQL `user(id)` query se kisi bhi user ki profile (Name, Avatar, Email, Mobile Number, Member Since) view karne ke liye render hota hai.
+
 import React, { useEffect, useState } from 'react';
 import { X, Mail, Phone, Calendar, Shield, CheckCircle2 } from 'lucide-react';
 import { User } from '../../types/user';
@@ -9,6 +14,7 @@ interface PublicProfileModalProps {
   onClose: () => void;
 }
 
+// User Full Name se Initials (e.g. "John Doe" -> "JD") extract karne ka helper
 const getInitials = (fullName: string): string => {
   if (!fullName || !fullName.trim()) return 'U';
   const parts = fullName.trim().split(/\s+/);
@@ -18,6 +24,7 @@ const getInitials = (fullName: string): string => {
   return parts[0][0].toUpperCase();
 };
 
+// Safe ISO Date Formatter ("Member Since" date display ke liye)
 const formatMemberSince = (dateVal?: string | number): string => {
   if (!dateVal) return 'Recently';
   let d = new Date(dateVal);
@@ -36,6 +43,7 @@ export const PublicProfileModal: React.FC<PublicProfileModalProps> = ({ userId, 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Modal open hone par GraphQL `getUserById` API call run karte hain
   useEffect(() => {
     if (!isOpen || !userId) {
       setUser(null);
@@ -153,7 +161,7 @@ export const PublicProfileModal: React.FC<PublicProfileModalProps> = ({ userId, 
               </div>
             </div>
 
-            {/* Profile Info Grid */}
+            {/* Profile Info Details Grid */}
             <div
               style={{
                 display: 'flex',
@@ -165,7 +173,7 @@ export const PublicProfileModal: React.FC<PublicProfileModalProps> = ({ userId, 
                 border: '1px solid var(--border-glass)',
               }}
             >
-              {/* Email */}
+              {/* Email Address */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(99, 102, 241, 0.1)', color: '#818cf8' }}>
                   <Mail size={16} />
@@ -191,7 +199,7 @@ export const PublicProfileModal: React.FC<PublicProfileModalProps> = ({ userId, 
                 </div>
               </div>
 
-              {/* Member Since */}
+              {/* Member Since Date */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(236, 72, 153, 0.1)', color: '#f472b6' }}>
                   <Calendar size={16} />
@@ -216,3 +224,4 @@ export const PublicProfileModal: React.FC<PublicProfileModalProps> = ({ userId, 
     </div>
   );
 };
+

@@ -1,3 +1,8 @@
+// ==========================================
+// 🕹️ USERS CONTROLLER (HTTP Route Handler)
+// ==========================================
+// Ye controller User Profile updates aur Avatar File uploads REST endpoints (PUT /api/v1/users/profile) handle karta hai.
+
 import { Response, NextFunction } from 'express';
 import { usersService, UsersService } from './users.service';
 import { UnauthorizedError } from '../../common/errors/app-error';
@@ -7,7 +12,7 @@ export class UsersController {
   constructor(private readonly service: UsersService = usersService) {}
 
   /**
-   * REST PUT /api/v1/users/profile
+   * REST Profile Update & Avatar Upload Handler (PUT /api/v1/users/profile)
    */
   public updateProfile = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -39,3 +44,4 @@ export class UsersController {
 }
 
 export const usersController = new UsersController();
+

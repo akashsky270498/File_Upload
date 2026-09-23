@@ -1,3 +1,8 @@
+// ==========================================
+// 🕹️ UPLOAD CONTROLLER (HTTP Route Handler)
+// ==========================================
+// Ye controller Single / Batch File Uploads, View Counter Increments, aur File Deletions handle karta hai.
+
 import { Response, NextFunction } from 'express';
 import { uploadService, UploadService } from './upload.service';
 import { uploadRepository } from './upload.repository';
@@ -8,6 +13,9 @@ import { ValidationError } from '../../common/errors/app-error';
 export class UploadController {
   constructor(private readonly service: UploadService = uploadService) {}
 
+  /**
+   * 1. Single File Upload Handler (POST /api/v1/uploads/single)
+   */
   public upload = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.file) {
@@ -17,6 +25,7 @@ export class UploadController {
       const { title, description, tags } = req.body;
       let uploadType = req.body.uploadType || req.body.fileType;
 
+      // Auto-detect File Type from MIME type if not explicitly provided
       if (!uploadType && req.file) {
         const mime = req.file.mimetype.toLowerCase();
         if (mime.startsWith('image/')) {
@@ -30,7 +39,7 @@ export class UploadController {
         }
       }
 
-      // Parse tags if sent as stringified JSON or comma-separated string in multipart form-data
+      // Stringified JSON ya comma-separated tags parse karne ka helper
       let parsedTags: string[] = [];
       if (tags) {
         if (typeof tags === 'string') {
@@ -60,11 +69,13 @@ export class UploadController {
     }
   };
 
+  /**
+   * 2. Multiple / Batch Files Upload Handler (POST /api/v1/uploads/batch) - Max 5 files
+   */
   public uploadBatch = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const files = req.files as Express.Multer.File[];
       if (!files || files.length === 0) {
-        // Fallback if client sent a single file as req.file
         if (req.file) {
           return this.upload(req, res, next);
         }
@@ -129,6 +140,9 @@ export class UploadController {
     }
   };
 
+  /**
+   * 3. Increment File View Counter Handler (POST /api/v1/uploads/:id/view)
+   */
   public incrementView = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;
@@ -145,6 +159,9 @@ export class UploadController {
     }
   };
 
+  /**
+   * 4. Delete File Handler (DELETE /api/v1/uploads/:id)
+   */
   public delete = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;
@@ -160,3 +177,4 @@ export class UploadController {
 }
 
 export const uploadController = new UploadController();
+

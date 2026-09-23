@@ -1,3 +1,9 @@
+// ==========================================
+// 📁 UPLOAD SERVICE (File Processing Pipeline)
+// ==========================================
+// Ye service File Upload, Cloudinary Stream, DB Transaction, RabbitMQ Queue, Kafka Event,
+// Elasticsearch Indexing, Notifications aur Real-time Socket.IO sync handle karti hai.
+
 import { FileType } from '../../infrastructure/postgres/models/file.model';
 import { User } from '../../infrastructure/postgres/models/user.model';
 import { NotificationType } from '../../infrastructure/postgres/models/notification.model';
@@ -20,7 +26,7 @@ export class UploadService {
   ) {}
 
   /**
-   * Process unified media upload with strategy validation, background jobs, and Cloudinary compensating transactions
+   * Main File Upload Pipeline (Cloudinary + PostgreSQL + Elasticsearch + Queues + Socket.io)
    */
   public async uploadMedia(
     userId: string,
@@ -31,7 +37,7 @@ export class UploadService {
       throw new ValidationError('File is required for upload');
     }
 
-    // 1. Select Strategy & Validate file
+    // 1. Strategy Pattern se file validation (MIME type & size check)
     const strategy = UploadStrategyFactory.getStrategy(dto.uploadType);
     strategy.validate(file);
 
@@ -39,7 +45,7 @@ export class UploadService {
     let cloudinaryResult: CloudinaryUploadResult | null = null;
 
     try {
-      // 2. Upload file stream to Cloudinary
+      // 2. Cloudinary Cloud Storage Stream Upload
       cloudinaryResult = await this.cloudinary.uploadStream(
         file.buffer,
         strategy.cloudinaryFolder,
@@ -51,7 +57,7 @@ export class UploadService {
         'Cloudinary stream upload successful. Saving metadata to PostgreSQL...'
       );
 
-      // 3. Save metadata to PostgreSQL using DB transaction
+      // 3. PostgreSQL Database Transaction me Metadata & Tags save karte hain
       const { file: fileRecord, tagNames } = await this.repository.createFileRecord({
         userId,
         originalName: file.originalname,
@@ -70,7 +76,7 @@ export class UploadService {
         'File record and tags saved successfully in PostgreSQL.'
       );
 
-      // 4. Publish background media processing job to RabbitMQ media.queue if video/audio
+      // 4. Video/Audio hone par RabbitMQ Queue me Thumbnail Generation Job bhejte hain
       if (dto.uploadType === FileType.VIDEO || dto.uploadType === FileType.AUDIO) {
         await rabbitMQProducer.publishMediaJob('generate-thumbnail', {
           fileId: fileRecord.id,
@@ -79,14 +85,14 @@ export class UploadService {
         });
       }
 
-      // 5. Publish Domain Event to Kafka omnimedia.media.events
+      // 5. Kafka Event Bus me MEDIA_UPLOADED event publish karte hain
       await kafkaProducerService.publishMediaEvent('MEDIA_UPLOADED', fileRecord.id, {
         userId,
         fileType: fileRecord.fileType,
         cloudinaryUrl: fileRecord.cloudinaryUrl,
       });
 
-      // 6. Index document into Elasticsearch
+      // 6. Fast Search Engine (Elasticsearch) me file record document Index karte hain
       await esIndexManager.indexFile({
         id: fileRecord.id,
         userId: fileRecord.userId,
@@ -101,7 +107,7 @@ export class UploadService {
         createdAt: new Date().toISOString(),
       });
 
-      // 7. Fetch uploader user details for instant UI metadata rendering
+      // 7. Uploader Details query karte hain Instant UI display ke liye
       const userRecord = await User.findByPk(userId, {
         attributes: ['id', 'firstName', 'lastName', 'email', 'profileImage'],
       });
@@ -134,7 +140,7 @@ export class UploadService {
         user: uploader,
       };
 
-      // 8. Save Notification record to PostgreSQL DB and push real-time Socket.IO notification to uploader
+      // 8. Notification Service ke through User Notification DB entry create karte hain
       try {
         await notificationService.createAndSendNotification({
           userId,
@@ -146,7 +152,7 @@ export class UploadService {
         logger.error({ notifErr }, 'Failed to trigger upload notification');
       }
 
-      // 9. Broadcast real-time live feed update to ALL connected users
+      // 9. Real-time WebSockets (Socket.IO) broadcast (Sabhi active logged-in users ko instant update milta hai)
       try {
         socketGateway.broadcast('file:uploaded', {
           ...responseDto,
@@ -158,7 +164,7 @@ export class UploadService {
 
       return responseDto;
     } catch (error) {
-      // 5. COMPENSATING TRANSACTION: If PostgreSQL database save fails, clean up Cloudinary asset
+      // COMPENSATING TRANSACTION: DB Failure hone par Cloudinary se asset auto-delete (rollback) kar dete hain
       if (cloudinaryResult?.public_id) {
         logger.error(
           { publicId: cloudinaryResult.public_id, error },
@@ -176,7 +182,7 @@ export class UploadService {
             { publicId: cloudinaryResult.public_id, cleanupErr },
             'CRITICAL: Cloudinary deletion compensating transaction failed! Enqueuing to RabbitMQ cleanup.queue...'
           );
-          // Enqueue to RabbitMQ cleanup.queue for async retry by Cleanup Worker
+          // Cleanup fail hone par RabbitMQ cleanup worker ko handoff kar dete hain
           await rabbitMQProducer.publishCleanupJob('cleanup-cloudinary-file', {
             publicId: cloudinaryResult.public_id,
             resourceType: strategy.resourceType,
@@ -196,13 +202,13 @@ export class UploadService {
   }
 
   /**
-   * Delete media asset from PostgreSQL DB, Cloudinary, and Elasticsearch
+   * Delete Media Asset (PostgreSQL, Cloudinary, Elasticsearch, Socket sync)
    */
   public async deleteMedia(id: string, userId: string, userRole: string): Promise<void> {
     const isAdmin = userRole === 'ADMIN';
     const deletedFile = await this.repository.deleteFileRecord(id, userId, isAdmin);
 
-    // Delete Cloudinary asset if public ID is present
+    // 1. Cloudinary storage se file remove karte hain
     if (deletedFile.cloudinaryPublicId) {
       try {
         const strategy = UploadStrategyFactory.getStrategy(deletedFile.fileType);
@@ -212,21 +218,21 @@ export class UploadService {
       }
     }
 
-    // Remove document from Elasticsearch index
+    // 2. Elasticsearch Index se remove karte hain
     try {
       await esIndexManager.deleteFile(id);
     } catch (err) {
       logger.error({ fileId: id, err }, 'Failed to delete file from Elasticsearch index');
     }
 
-    // Publish Kafka event
+    // 3. Kafka event emit karte hain
     try {
       await kafkaProducerService.publishMediaEvent('MEDIA_DELETED', id, { userId });
     } catch (err) {
       logger.error({ fileId: id, err }, 'Failed to publish MEDIA_DELETED Kafka event');
     }
 
-    // Broadcast real-time deletion event to ALL connected socket clients
+    // 4. Socket.io WebSocket broadcast (Frontend UI se instant file row remove hoti hai)
     try {
       socketGateway.broadcast('file:deleted', { id, fileId: id });
     } catch (broadcastErr) {
@@ -236,3 +242,4 @@ export class UploadService {
 }
 
 export const uploadService = new UploadService();
+

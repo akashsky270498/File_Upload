@@ -1,3 +1,8 @@
+// ==========================================
+// 🕹️ AUTHENTICATION CONTROLLER (HTTP Route Handler)
+// ==========================================
+// Ye controller Registration, Login, HttpOnly Cookie setting, Logout, OTP requests, aur Password updates handle karta hai.
+
 import { Request, Response, NextFunction, CookieOptions } from 'express';
 import { authService, AuthService } from './auth.service';
 import { AuthenticatedRequest } from '../../common/middleware/auth';
@@ -15,25 +20,28 @@ import {
 
 const isProduction = env.nodeEnv === 'production';
 
+// Access Token Cookie Config (15 mins maxAge)
 const getAccessCookieOptions = (): CookieOptions => ({
   httpOnly: true,
   secure: isProduction,
   sameSite: isProduction ? 'none' : 'lax',
-  maxAge: 15 * 60 * 1000, // 15 mins
+  maxAge: 15 * 60 * 1000,
   path: '/',
 });
 
+// Refresh Token Cookie Config (7 days maxAge)
 const getRefreshCookieOptions = (): CookieOptions => ({
   httpOnly: true,
   secure: isProduction,
   sameSite: isProduction ? 'none' : 'lax',
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  maxAge: 7 * 24 * 60 * 60 * 1000,
   path: '/',
 });
 
 export class AuthController {
   constructor(private readonly service: AuthService = authService) {}
 
+  // Secure HttpOnly Cookie Set Helper
   private setAuthCookies(res: Response, accessToken?: string, refreshToken?: string): void {
     if (accessToken) {
       res.cookie('accessToken', accessToken, getAccessCookieOptions());
@@ -45,11 +53,15 @@ export class AuthController {
     }
   }
 
+  // Clear Cookies Helper (Logout par)
   private clearAuthCookies(res: Response): void {
     res.clearCookie('accessToken', { path: '/', httpOnly: true, secure: isProduction, sameSite: isProduction ? 'none' : 'lax' });
     res.clearCookie('refreshToken', { path: '/', httpOnly: true, secure: isProduction, sameSite: isProduction ? 'none' : 'lax' });
   }
 
+  /**
+   * 1. Register Handler (POST /api/v1/auth/register)
+   */
   public register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const dto: RegisterDTO = req.body;
@@ -63,6 +75,9 @@ export class AuthController {
     }
   };
 
+  /**
+   * 2. Login Handler (POST /api/v1/auth/login) - HttpOnly Cookies attach karta hai
+   */
   public login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const dto: LoginDTO = req.body;
@@ -79,6 +94,9 @@ export class AuthController {
     }
   };
 
+  /**
+   * 3. Request Login OTP Handler (POST /api/v1/auth/otp/request)
+   */
   public requestLoginOtp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const dto: RequestOtpDTO = req.body;
@@ -92,6 +110,9 @@ export class AuthController {
     }
   };
 
+  /**
+   * 4. Verify Login OTP Handler (POST /api/v1/auth/otp/verify)
+   */
   public verifyLoginOtp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const dto: VerifyOtpDTO = req.body;
@@ -108,6 +129,9 @@ export class AuthController {
     }
   };
 
+  /**
+   * 5. Refresh Tokens Handler (POST /api/v1/auth/refresh)
+   */
   public refreshTokens = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const refreshToken = req.cookies?.refreshToken || req.headers['x-refresh-token'] || req.body?.refreshToken;
@@ -129,6 +153,9 @@ export class AuthController {
     }
   };
 
+  /**
+   * 6. Logout Handler (POST /api/v1/auth/logout) - Clears cookies
+   */
   public logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const refreshToken = req.cookies?.refreshToken || req.headers['x-refresh-token'] || req.body?.refreshToken;
@@ -146,6 +173,9 @@ export class AuthController {
     }
   };
 
+  /**
+   * 7. Forgot Password Handler (POST /api/v1/auth/forgot-password)
+   */
   public forgotPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const dto: ForgotPasswordDTO = req.body;
@@ -159,6 +189,9 @@ export class AuthController {
     }
   };
 
+  /**
+   * 8. Reset Password Handler (POST /api/v1/auth/reset-password)
+   */
   public resetPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const dto: ResetPasswordDTO = req.body;
@@ -172,7 +205,9 @@ export class AuthController {
     }
   };
 
-
+  /**
+   * 9. Change Password Handler (POST /api/v1/auth/change-password)
+   */
   public changePassword = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.user!.userId;
@@ -189,3 +224,4 @@ export class AuthController {
 }
 
 export const authController = new AuthController();
+

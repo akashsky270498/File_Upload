@@ -1,3 +1,8 @@
+// ==========================================
+// 👤 USERS SERVICE (Business Logic)
+// ==========================================
+// Ye service User Profile fetching, Mobile Number uniqueness validation, Avatar upload (Cloudinary), aur Profile details update handle karti hai.
+
 import { usersRepository, UsersRepository } from './users.repository';
 import { UserProfileResponse, UpdateProfileDTO } from './users.interface';
 import { NotFoundError, ConflictError, ValidationError } from '../../common/errors/app-error';
@@ -12,7 +17,7 @@ export class UsersService {
   ) {}
 
   /**
-   * Update user profile information & optional avatar
+   * 1. Profile information update + optional Avatar image Cloudinary upload
    */
   public async updateProfile(
     userId: string,
@@ -38,6 +43,7 @@ export class UsersService {
       updates.lastName = trimmed;
     }
 
+    // Mobile number uniqueness check
     if (dto.mobileNumber !== undefined && dto.mobileNumber !== null) {
       const trimmedMobile = dto.mobileNumber.trim();
       if (trimmedMobile && trimmedMobile !== user.mobileNumber) {
@@ -49,12 +55,11 @@ export class UsersService {
       }
     }
 
-    // Direct profile image URL update if passed in body
     if (dto.profileImage) {
       updates.profileImage = dto.profileImage;
     }
 
-    // File avatar upload takes precedence if uploaded via multipart/form-data
+    // Multipart avatar image file upload to Cloudinary 'avatars' folder
     if (avatarFile) {
       try {
         const result = await this.cloudinary.uploadStream(avatarFile.buffer, 'avatars', 'image');
@@ -74,7 +79,7 @@ export class UsersService {
   }
 
   /**
-   * Get user profile by ID
+   * 2. User ID se Profile Details fetch karna
    */
   public async getUserById(userId: string): Promise<UserProfileResponse> {
     const user = await this.repository.findById(userId);
@@ -85,7 +90,7 @@ export class UsersService {
   }
 
   /**
-   * Map database User model to UserProfileResponse DTO
+   * Helper function: DB User Model to Clean Response DTO mapping
    */
   private mapToResponse(user: User): UserProfileResponse {
     return {
@@ -103,3 +108,4 @@ export class UsersService {
 }
 
 export const usersService = new UsersService();
+

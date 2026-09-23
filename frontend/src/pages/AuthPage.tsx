@@ -1,3 +1,8 @@
+// ==========================================
+// 🔐 AUTHENTICATION PAGE COMPONENT
+// ==========================================
+// Ye component Login (Password & OTP), Registration, aur Forgot/Reset Password flows UI handle karta hai.
+
 import React, { useState } from 'react';
 import { Mail, Lock, Layers, LogIn, KeyRound, ShieldCheck, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../store';
@@ -14,7 +19,6 @@ import {
 import { showToast } from '../store/slices/uiSlice';
 import { RegisterForm } from '../components/auth/RegisterForm';
 
-
 type AuthView = 'LOGIN' | 'REGISTER' | 'FORGOT_PASSWORD';
 type LoginMethod = 'PASSWORD' | 'OTP';
 
@@ -26,13 +30,14 @@ export const AuthPage: React.FC = () => {
   const [authView, setAuthView] = useState<AuthView>('LOGIN');
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('PASSWORD');
 
-  // Form Fields
+  // Form input states
   const [email, setEmail] = useState('');
   const [otpEmail, setOtpEmail] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
+  // OTP send hone par active login method switch karne ka effect
   React.useEffect(() => {
     if (otpSent) {
       setLoginMethod('OTP');
@@ -43,6 +48,7 @@ export const AuthPage: React.FC = () => {
     }
   }, [otpSent, reduxOtpEmail, otpEmail, email]);
 
+  // 1. Password Login Submit Handler
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     dispatch(clearError());
@@ -54,6 +60,7 @@ export const AuthPage: React.FC = () => {
     }
   };
 
+  // 2. Request OTP Code Handler
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     dispatch(clearError());
@@ -68,6 +75,7 @@ export const AuthPage: React.FC = () => {
     }
   };
 
+  // 3. Verify OTP Code Handler
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     dispatch(clearError());
@@ -88,6 +96,7 @@ export const AuthPage: React.FC = () => {
     }
   };
 
+  // 4. Forgot Password Request Handler
   const handleForgotPasswordRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     dispatch(clearError());
@@ -99,6 +108,7 @@ export const AuthPage: React.FC = () => {
     }
   };
 
+  // 5. Reset Password Submit Handler
   const handleResetPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     dispatch(clearError());
@@ -110,6 +120,7 @@ export const AuthPage: React.FC = () => {
     }
   };
 
+  // Switch View Helper (Login / Register / Forgot Password)
   const switchView = (view: AuthView) => {
     setAuthView(view);
     dispatch(clearError());
@@ -127,7 +138,6 @@ export const AuthPage: React.FC = () => {
         }}
       >
         <div className="auth-brand">
-
           <div className="brand-icon-lg">
             <Layers size={36} />
           </div>
@@ -337,7 +347,6 @@ export const AuthPage: React.FC = () => {
             <RegisterForm onSwitchToLogin={() => switchView('LOGIN')} />
           )}
 
-
           {/* VIEW 3: FORGOT PASSWORD */}
           {authView === 'FORGOT_PASSWORD' && (
             <div>
@@ -445,3 +454,4 @@ export const AuthPage: React.FC = () => {
     </div>
   );
 };
+

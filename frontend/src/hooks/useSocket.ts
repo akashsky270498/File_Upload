@@ -1,3 +1,9 @@
+// ==========================================
+// 🔌 REAL-TIME WEBSOCKET HOOK (Socket.io)
+// ==========================================
+// Ye custom hook application me Socket.io connection manage karta hai.
+// Multi-browser tab dynamic file sync (Real-time file added, deleted, notification toast) handle karta hai.
+
 import { useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAppDispatch, useAppSelector } from '../store';
@@ -12,6 +18,7 @@ export const useSocket = (): void => {
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
 
   useEffect(() => {
+    // 1. Logged out hone par socket connection disconnect kar dete hain
     if (!isAuthenticated) {
       if (socket) {
         socket.disconnect();
@@ -20,6 +27,7 @@ export const useSocket = (): void => {
       return;
     }
 
+    // 2. Logged in hone par backend Socket Server connect karte hain
     if (!socket || !socket.connected) {
       socket = io(SOCKET_URL, {
         withCredentials: true,
@@ -31,6 +39,7 @@ export const useSocket = (): void => {
       console.log('[Socket.io] Connected to real-time notification server');
     });
 
+    // 3. New File Upload / Processed Notification Listener (Jab doosra user file upload kare)
     const handleNotification = (payload: any) => {
       const uploaderName =
         payload.uploaderName ||
@@ -45,6 +54,7 @@ export const useSocket = (): void => {
         createdAt: payload.createdAt || new Date().toISOString(),
       };
 
+      // Toast Popup Notification Trigger (5 Seconds auto dismiss)
       dispatch(setActiveNotification(formatted));
       dispatch(addNotificationToHistory(formatted));
 
@@ -52,7 +62,7 @@ export const useSocket = (): void => {
         dispatch(setActiveNotification(null));
       }, 5000);
 
-      // Add to live media feed immediately if file object is present
+      // Redux Feed me Nayi File instant render/add karte hain (Without Manual Page Refresh)
       if (payload.id && payload.cloudinaryUrl) {
         const liveFile: MediaFile = {
           id: payload.id,
@@ -77,6 +87,7 @@ export const useSocket = (): void => {
       }
     };
 
+    // 4. File Deletion Sync Listener (Jab koi user file delete kare toh UI se instant remove hoti hai)
     const handleFileDeleted = (payload: any) => {
       const deletedId = payload?.id || payload?.fileId;
       if (deletedId) {
@@ -84,6 +95,7 @@ export const useSocket = (): void => {
       }
     };
 
+    // Socket Event Bindings
     socket.on('notification:new', handleNotification);
     socket.on('media:processed', handleNotification);
     socket.on('file:uploaded', handleNotification);
@@ -91,6 +103,7 @@ export const useSocket = (): void => {
     socket.on('file:deleted', handleFileDeleted);
     socket.on('MEDIA_DELETED', handleFileDeleted);
 
+    // Component unmount / state change cleanup
     return () => {
       if (socket) {
         socket.off('connect');
@@ -104,4 +117,5 @@ export const useSocket = (): void => {
     };
   }, [dispatch, isAuthenticated]);
 };
+
 

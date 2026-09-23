@@ -1,3 +1,8 @@
+// ==========================================
+// 🛡️ REDUX AUTH SLICE (State Management)
+// ==========================================
+// Ye file Frontend Application ki Authentication State (Logged-in User, Loading, Errors, Session Restore) manage karti hai.
+
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { AuthState, User } from '../../types/user';
 import {
@@ -21,6 +26,9 @@ const initialState: AuthState = {
   forgotPasswordStep: 'REQUEST',
 };
 
+/**
+ * 1. Login User Async Thunk (REST API Call via Axios)
+ */
 export const loginUser = createAsyncThunk<AuthResponseData, LoginPayload, { rejectValue: string }>(
   'auth/loginUser',
   async (payload, { rejectWithValue }) => {
@@ -37,6 +45,9 @@ export const loginUser = createAsyncThunk<AuthResponseData, LoginPayload, { reje
   }
 );
 
+/**
+ * 2. Register User Async Thunk
+ */
 export const registerUser = createAsyncThunk<{ id: string; email: string; message: string }, RegisterPayload, { rejectValue: string }>(
   'auth/registerUser',
   async (payload, { rejectWithValue }) => {
@@ -53,6 +64,9 @@ export const registerUser = createAsyncThunk<{ id: string; email: string; messag
   }
 );
 
+/**
+ * 3. Request OTP Login Async Thunk
+ */
 export const requestLoginOtp = createAsyncThunk<string, string, { rejectValue: string }>(
   'auth/requestLoginOtp',
   async (email, { rejectWithValue }) => {
@@ -69,6 +83,9 @@ export const requestLoginOtp = createAsyncThunk<string, string, { rejectValue: s
   }
 );
 
+/**
+ * 4. Verify OTP Login Async Thunk
+ */
 export const verifyLoginOtp = createAsyncThunk<AuthResponseData, VerifyOtpPayload, { rejectValue: string }>(
   'auth/verifyLoginOtp',
   async (payload, { rejectWithValue }) => {
@@ -85,6 +102,9 @@ export const verifyLoginOtp = createAsyncThunk<AuthResponseData, VerifyOtpPayloa
   }
 );
 
+/**
+ * 5. Forgot Password Request Thunk
+ */
 export const forgotPassword = createAsyncThunk<string, string, { rejectValue: string }>(
   'auth/forgotPassword',
   async (email, { rejectWithValue }) => {
@@ -101,6 +121,9 @@ export const forgotPassword = createAsyncThunk<string, string, { rejectValue: st
   }
 );
 
+/**
+ * 6. Reset Password via OTP Thunk
+ */
 export const resetPassword = createAsyncThunk<string, ResetPasswordPayload, { rejectValue: string }>(
   'auth/resetPassword',
   async (payload, { rejectWithValue }) => {
@@ -117,6 +140,9 @@ export const resetPassword = createAsyncThunk<string, ResetPasswordPayload, { re
   }
 );
 
+/**
+ * 7. Change Password Thunk
+ */
 export const changePassword = createAsyncThunk<string, ChangePasswordPayload, { rejectValue: string }>(
   'auth/changePassword',
   async (payload, { rejectWithValue }) => {
@@ -133,6 +159,9 @@ export const changePassword = createAsyncThunk<string, ChangePasswordPayload, { 
   }
 );
 
+/**
+ * 8. Fetch Current Logged-in User Profile Thunk (Page refresh par GraphQL `me` query dwara session restore)
+ */
 export const fetchCurrentUser = createAsyncThunk<User, void, { rejectValue: string }>(
   'auth/fetchCurrentUser',
   async (_, { rejectWithValue }) => {
@@ -148,6 +177,9 @@ export const fetchCurrentUser = createAsyncThunk<User, void, { rejectValue: stri
   }
 );
 
+/**
+ * 9. Logout User Thunk
+ */
 export const logoutUser = createAsyncThunk<void, void>('auth/logoutUser', async () => {
   try {
     await authApi.logout();
@@ -181,7 +213,7 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Login
+      // Login reducers
       .addCase(loginUser.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -196,7 +228,7 @@ const authSlice = createSlice({
         state.error = action.payload || 'Login failed';
       })
 
-      // Register
+      // Register reducers
       .addCase(registerUser.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -282,7 +314,7 @@ const authSlice = createSlice({
         state.error = action.payload || 'Password change failed';
       })
 
-      // Fetch Me
+      // Fetch Me (Session Restore)
       .addCase(fetchCurrentUser.pending, (state) => {
         state.isLoading = true;
       })
@@ -312,3 +344,4 @@ const authSlice = createSlice({
 
 export const { clearError, resetOtpState, setForgotPasswordStep, resetAuth } = authSlice.actions;
 export default authSlice.reducer;
+

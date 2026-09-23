@@ -1,3 +1,9 @@
+// ==========================================
+// 🚀 SERVER ENTRY POINT (Backend Start Script)
+// ==========================================
+// Ye file Pure Backend Application ki Entry Point hai.
+// Yaha se Sabhi Databases, Caches, Message Queues aur Express Server start hote hain.
+
 import 'reflect-metadata';
 import { createApp } from './app';
 import { env } from './config/env';
@@ -15,34 +21,40 @@ import http from 'http';
 import { initTracing } from './config/tracing';
 import { socketGateway } from './modules/notifications/socket.gateway';
 
+/**
+ * Main Server Initialization Function
+ */
 const startServer = async (): Promise<void> => {
   try {
-    // 0. Initialize OpenTelemetry Distributed Tracing (non-blocking)
+    // 0. OpenTelemetry Distributed Tracing (Performance tracking & logging trace IDs)
     initTracing().catch(() => {});
 
-    // 1. Connect to Core Primary Stores (PostgreSQL & Redis)
+    // 1. Primary Databases ko pehle connect karte hain (PostgreSQL Database & Redis Cache)
     await Promise.all([connectPostgres(), connectRedis()]);
 
-    // 2. Instantiate Express Application, HTTP Server & Socket.IO Gateway
+    // 2. Express Web App, HTTP Server aur Real-time WebSockets (Socket.IO) ko create & bind karte hain
     const app = await createApp();
     const server = http.createServer(app);
     socketGateway.init(server);
 
-    // 3. Start HTTP Server Listener INSTANTLY (<1s)
+    // 3. Server Listener ko start karte hain (Instant response ke liye pehle listen karwa dete hain)
     server.listen(env.port, () => {
       logger.info(`Server running in [${env.nodeEnv}] mode on http://localhost:${env.port}`);
     });
 
-    // 4. Initialize Background Subsystems (RabbitMQ, Kafka, Elasticsearch) Non-Blocking
+    // 4. Background Services ko non-blocking tarike se run karte hain (RabbitMQ, Kafka, Elasticsearch)
+    // Isse server quick start ho jata hai background tasks launch hone tak wait nahi karta
     Promise.all([
-      connectRabbitMQ().then(() => startAllWorkers()),
-      connectKafka().then(() => startAllKafkaConsumers()),
-      connectElasticsearch().then(() => esIndexManager.initFilesIndex()),
+      connectRabbitMQ().then(() => startAllWorkers()), // File processing queues
+      connectKafka().then(() => startAllKafkaConsumers()), // Real-time notification events
+      connectElasticsearch().then(() => esIndexManager.initFilesIndex()), // Fast search index
     ]).catch((err) => {
       logger.error({ err }, 'Background subsystem initialization warning.');
     });
 
-    // Graceful Shutdown handling
+    // ==========================================
+    // 🛑 GRACEFUL SHUTDOWN (Server band hone par clean cleanup)
+    // ==========================================
     const gracefulShutdown = async (signal: string) => {
       logger.info(`Received ${signal}. Initiating graceful shutdown...`);
       server.close(async () => {
@@ -68,6 +80,7 @@ const startServer = async (): Promise<void> => {
       });
     };
 
+    // System signals (ctrl+c ya deployment stop) ko capture karna
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
   } catch (error) {
@@ -77,3 +90,4 @@ const startServer = async (): Promise<void> => {
 };
 
 startServer();
+

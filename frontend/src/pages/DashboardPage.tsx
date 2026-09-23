@@ -1,3 +1,8 @@
+// ==========================================
+// 📊 DASHBOARD PAGE COMPONENT
+// ==========================================
+// Ye component Logged-in User Dashboard render karta hai (Navbar, Search Filters, File Grid Feed, Upload Modal, Preview Modal, Real-time WebSockets).
+
 import React, { useState, useEffect } from 'react';
 import { Navbar } from '../components/layout/Navbar';
 import { FileFilterBar } from '../components/files/FileFilterBar';
@@ -17,23 +22,26 @@ export const DashboardPage: React.FC = () => {
   const { filters } = useAppSelector((state) => state.files);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
 
-  // Initialize Socket.io listener
+  // 1. Socket.io Real-time WebSocket event listener initialization
   useSocket();
 
-  // Debounce search query
+  // 2. Debounce Search Input (350ms delay fast typing performance optimization ke liye)
   const debouncedQuery = useDebounce(filters.query, 350);
 
+  // 3. Search Query / Filters change hone par Files list refetch effect
   useEffect(() => {
     dispatch(fetchFiles({ ...filters, query: debouncedQuery }));
   }, [dispatch, debouncedQuery, filters.fileType, filters.sortBy, filters.page]);
 
   return (
     <div className="dashboard-layout">
+      {/* Top Navbar Header */}
       <Navbar onOpenUpload={() => setIsUploadOpen(true)} />
       <ToastNotification />
       <GlobalToast />
       <ConfirmModal />
 
+      {/* Main Files Feed Section */}
       <main className="dashboard-content">
         <div className="content-container">
           <FileFilterBar />
@@ -41,9 +49,10 @@ export const DashboardPage: React.FC = () => {
         </div>
       </main>
 
-
+      {/* Upload Asset Modal & Inline PDF/Media Preview Modals */}
       <UploadModal isOpen={isUploadOpen} onClose={() => setIsUploadOpen(false)} />
       <MediaPreviewModal />
     </div>
   );
 };
+

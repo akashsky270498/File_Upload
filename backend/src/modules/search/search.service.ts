@@ -1,3 +1,8 @@
+// ==========================================
+// 🔎 SEARCH SERVICE (Elasticsearch Engine + Postgres Fallback)
+// ==========================================
+// Ye service Advanced Full-Text Search, Wildcard, Fuzzy Matching, Aggregation Facets, aur PostgreSQL DB Fallback execution handle karti hai.
+
 import { esClient, INDEX_NAMES } from '../../config/elasticsearch';
 import { logger } from '../../common/logger';
 import { User } from '../../infrastructure/postgres/models/user.model';
@@ -51,7 +56,7 @@ export interface SearchResponseDTO {
 
 export class SearchService {
   /**
-   * Perform advanced full-text search with boosted fields, fuzzy matching, filters, and aggregations
+   * Primary Search Execution: Elasticsearch query with Multi-match, Wildcards, Prefix, Filters, & DB Hydration
    */
   public async searchFiles(params: SearchQueryParams): Promise<SearchResponseDTO> {
     const page = Math.max(1, params.page || 1);
@@ -61,7 +66,7 @@ export class SearchService {
     const mustClauses: any[] = [];
     const filterClauses: any[] = [];
 
-    // Full-Text Multi-Match + Wildcard + Prefix query for partial tag & title matching
+    // Full-Text Search: Multi-Match + Wildcards + Prefix for partial title/tag searching
     if (params.query && params.query.trim().length > 0) {
       const searchTerm = params.query.trim().toLowerCase();
       mustClauses.push({
@@ -103,7 +108,7 @@ export class SearchService {
       mustClauses.push({ match_all: {} });
     }
 
-    // Facet Filter: File Type Mapping
+    // Category Filter: File Type Filtering
     if (params.fileType && params.fileType !== 'all') {
       const ft = params.fileType.toUpperCase();
       if (ft === 'IMAGE' || ft === 'IMAGES' || ft === 'POST_MEDIA') {
@@ -115,12 +120,12 @@ export class SearchService {
       }
     }
 
-    // Facet Filter: Tags
+    // Tag Filter
     if (params.tags && params.tags.length > 0) {
       filterClauses.push({ terms: { tags: params.tags } });
     }
 
-    // Sort clause for Elasticsearch with unmapped_type handling to prevent shard exceptions on unmapped fields
+    // Sorting clauses with safe unmapped types handling
     let esSort: any[] = [{ createdAt: { order: 'desc', unmapped_type: 'date' } }];
     if (params.sortBy === 'views') {
       esSort = [{ viewsCount: { order: params.sortOrder || 'desc', unmapped_type: 'long' } }];
@@ -161,7 +166,7 @@ export class SearchService {
         score: hit._score,
       }));
 
-      // If Elasticsearch returns results, hydrate user metadata & viewsCount
+      // DB Hydration: Elasticsearch IDs lekar PostgreSQL se User & Tag details attach karte hain
       if (results.length > 0) {
         const fileIds = results.map((r) => r.id).filter(Boolean);
         if (fileIds.length > 0) {
@@ -194,7 +199,7 @@ export class SearchService {
           });
         }
 
-        // Parse aggregations
+        // Parse search facets
         const fileTypeCounts: Record<string, number> = {};
         const fileTypeBuckets = (response.aggregations?.by_file_type as any)?.buckets || [];
         fileTypeBuckets.forEach((bucket: any) => {
@@ -223,7 +228,7 @@ export class SearchService {
       logger.error({ error, params }, 'Elasticsearch SearchService failed, executing PostgreSQL fallback search.');
     }
 
-    // Execute PostgreSQL fallback search when ES returns 0 results or throws error
+    // Fallback Execution: Agar Elasticsearch down ho ya empty ho, PostgreSQL iLike se search karte hain
     const whereClause: any = {};
     if (params.fileType && params.fileType !== 'all') {
       const ft = params.fileType.toUpperCase();
@@ -311,3 +316,4 @@ export class SearchService {
 }
 
 export const searchService = new SearchService();
+

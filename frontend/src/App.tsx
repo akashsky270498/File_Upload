@@ -1,3 +1,9 @@
+// ==========================================
+// 💻 FRONTEND ROOT COMPONENT (App.tsx)
+// ==========================================
+// Ye Frontend Application ka Root Component hai. Yahan User Authentication check,
+// Theme switching, Global Notifications (Toasts), aur Routing logic handle hoti hai.
+
 import React, { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from './store';
 import { fetchCurrentUser, resetAuth } from './store/slices/authSlice';
@@ -11,18 +17,19 @@ export const App: React.FC = () => {
   const { isAuthenticated, isLoading, token, user } = useAppSelector((state) => state.auth);
   const theme = useAppSelector((state) => state.ui.theme);
 
+  // 1. Dark / Light Theme sync effect (HTML element par attribute update karta hai)
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // Restore user session on app load or refresh via HttpOnly cookie
+  // 2. Page reload hone par User Session restore effect (HttpOnly cookie ke through 'me' profile query fetch karta hai)
   useEffect(() => {
     if (!user) {
       dispatch(fetchCurrentUser());
     }
   }, [dispatch, user]);
 
-  // Listen for refresh token failure events
+  // 3. Global Auth Logout Listener (Agar refresh token expire ya invalid ho jaye toh automatic logout trigger karta hai)
   useEffect(() => {
     const handleAuthLogout = () => {
       dispatch(resetAuth());
@@ -35,6 +42,7 @@ export const App: React.FC = () => {
     };
   }, [dispatch]);
 
+  // 4. Initial Loader Screen (Jab tak session fetch ho raha hai)
   if (isLoading) {
     return (
       <div className="loading-screen">
@@ -44,6 +52,7 @@ export const App: React.FC = () => {
     );
   }
 
+  // 5. Main View: Logged in hai toh DashboardPage, warna AuthPage (Login/Register)
   return (
     <>
       <GlobalToast />
@@ -53,3 +62,4 @@ export const App: React.FC = () => {
 };
 
 export default App;
+

@@ -1,3 +1,8 @@
+// ==========================================
+// 👤 USER PROFILE API SERVICES
+// ==========================================
+// User profile fetch karne ke liye GraphQL Queries aur Profile Update/Avatar Upload ke liye REST APIs.
+
 import { executeGraphQL } from './graphqlClient';
 import axiosClient from './axiosClient';
 import { ApiResponse } from '../types/api';
@@ -13,7 +18,7 @@ export interface UpdateProfileInput {
 
 export const usersApi = {
   /**
-   * Fetch authenticated user profile via GraphQL
+   * 1. Current Authenticated Logged-In User Profile fetcher via GraphQL (`me` query)
    */
   getProfile: async (): Promise<ApiResponse<User>> => {
     const query = `
@@ -48,7 +53,7 @@ export const usersApi = {
   },
 
   /**
-   * Fetch user profile by ID via GraphQL
+   * 2. ID se kisi bhi User ka Public Profile fetcher via GraphQL (`user` query)
    */
   getUserById: async (id: string): Promise<ApiResponse<User>> => {
     const query = `
@@ -83,11 +88,12 @@ export const usersApi = {
   },
 
   /**
-   * Update authenticated user profile via REST PUT /api/v1/users/profile
-   * Supports JSON body or multipart/form-data with avatar image file
+   * 3. Profile update handler via REST API (PUT /api/v1/users/profile)
+   * Supports textual fields (Name, Mobile) as well as direct Avatar image file upload to Cloudinary.
    */
   updateProfile: async (input: UpdateProfileInput): Promise<ApiResponse<User>> => {
     if (input.avatarFile) {
+      // Form-Data upload for image file
       const formData = new FormData();
       if (input.firstName) formData.append('firstName', input.firstName);
       if (input.lastName) formData.append('lastName', input.lastName);
@@ -102,6 +108,7 @@ export const usersApi = {
       });
       return res.data;
     } else {
+      // Standard JSON update for text fields
       const res = await axiosClient.put<ApiResponse<User>>('/users/profile', {
         firstName: input.firstName,
         lastName: input.lastName,
@@ -112,3 +119,4 @@ export const usersApi = {
     }
   },
 };
+
